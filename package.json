@@ -1,30 +1,9 @@
 {
   "name": "mflix-api",
   "version": "1.0.0",
-  "description": "API for fetching drama and anime shows from kisskh",
   "main": "index.js",
-  "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "vercel-build": "echo 'Build complete'"
-  },
-  "keywords": [
-    "api",
-    "drama",
-    "anime",
-    "mflix",
-    "kisskh"
-  ],
-  "author": "",
-  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "axios": "^1.6.2"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
-  },
-  "engines": {
-    "node": ">=18.x"
   }
 }
