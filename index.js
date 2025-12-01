@@ -41,16 +41,15 @@ app.get('/api/DramaList/Upcoming', async (req, res) => {
       params: { ispc: ispc || 'true' },
       headers: {
         'accept': 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate, br, zstd',
+        'accept-encoding': 'gzip, deflate',
         'accept-language': 'en-US,en;q=0.9',
         'cache-control': 'no-cache',
         'referer': 'https://kisskh.do/',
-        'sec-fetch-dest': 'empty',
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-site': 'same-origin',
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       },
-      timeout: 10000 // 10 second timeout
+      timeout: 10000,
+      decompress: true,
+      responseType: 'json'
     });
 
     res.json(response.data);
