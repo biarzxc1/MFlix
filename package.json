@@ -1,9 +1,13 @@
 {
-  "name": "mflix-api",
+  "name": "kisskh-proxy-api",
   "version": "1.0.0",
   "main": "index.js",
+  "scripts": {
+    "dev": "node index.js",
+    "start": "node index.js"
+  },
   "dependencies": {
-    "express": "^4.18.2",
-    "axios": "^1.6.2"
+    "axios": "^1.7.7",
+    "express": "^4.21.2"
   }
 }
