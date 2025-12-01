@@ -15,25 +15,27 @@ app.use((req, res, next) => {
   next();
 });
 
-// Common headers for kisskh requests (without cookies)
+// Common headers for kisskh requests - exactly as shown in your successful request
 const getKisskhHeaders = () => ({
-  'sec-ch-ua-platform': '"Android"',
-  'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36',
+  'authority': 'kisskh.do',
+  'method': 'GET',
+  'scheme': 'https',
   'accept': 'application/json, text/plain, */*',
-  'sec-ch-ua': '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
-  'sec-ch-ua-mobile': '?1',
-  'sec-fetch-site': 'same-origin',
-  'sec-fetch-mode': 'cors',
-  'sec-fetch-dest': 'empty',
-  'referer': 'https://kisskh.co/',
-  'accept-encoding': 'gzip, deflate, br, zstd',
+  'accept-encoding': 'gzip, deflate, br',
   'accept-language': 'en-US,en;q=0.9',
-  'priority': 'u=1, i'
+  'referer': 'https://kisskh.do/',
+  'sec-ch-ua': '"Chromium";v="137", "Not)A;Brand";v="24"',
+  'sec-ch-ua-mobile': '?1',
+  'sec-ch-ua-platform': '"Android"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36'
 });
 
 // Axios instance with default config
 const kisskhAPI = axios.create({
-  baseURL: 'https://kisskh.co',
+  baseURL: 'https://kisskh.do',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
@@ -43,11 +45,11 @@ const kisskhAPI = axios.create({
 // Upcoming endpoint
 app.get('/api/upcoming', async (req, res) => {
   try {
-    console.log('Fetching upcoming shows from kisskh.co...');
+    console.log('Fetching upcoming shows from kisskh.do...');
     
     const response = await kisskhAPI.get('/api/DramaList/Upcoming', {
       params: { 
-        ispc: false
+        ispc: 'false'
       },
       headers: getKisskhHeaders()
     });
@@ -71,7 +73,7 @@ app.get('/api/upcoming', async (req, res) => {
       success: false,
       message: 'Failed to fetch upcoming shows',
       error: error.message,
-      details: error.response?.data || null
+      status: error.response?.status || 500
     });
   }
 });
@@ -79,11 +81,11 @@ app.get('/api/upcoming', async (req, res) => {
 // Anime endpoint
 app.get('/api/anime', async (req, res) => {
   try {
-    console.log('Fetching anime shows from kisskh.co...');
+    console.log('Fetching anime shows from kisskh.do...');
     
     const response = await kisskhAPI.get('/api/DramaList/Animate', {
       params: { 
-        ispc: false
+        ispc: 'false'
       },
       headers: getKisskhHeaders()
     });
@@ -107,7 +109,7 @@ app.get('/api/anime', async (req, res) => {
       success: false,
       message: 'Failed to fetch anime shows',
       error: error.message,
-      details: error.response?.data || null
+      status: error.response?.status || 500
     });
   }
 });
@@ -127,7 +129,7 @@ app.get('/', (req, res) => {
   res.json({
     name: 'MFlix-Api',
     version: '1.0.0',
-    description: 'API for fetching drama and anime shows from kisskh.co',
+    description: 'API for fetching drama and anime shows from kisskh.do',
     endpoints: {
       upcoming: {
         url: '/api/upcoming',
