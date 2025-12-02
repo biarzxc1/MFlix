@@ -15,6 +15,38 @@ app.use(cors({
 
 app.use(express.json());
 
+// Helper function to filter drama list data
+const filterDramaList = (items) => {
+  return items.map(item => ({
+    id: item.id,
+    title: item.title,
+    thumbnail: item.thumbnail,
+    episodesCount: item.episodesCount,
+    label: item.label,
+    favoriteID: item.favoriteID
+  }));
+};
+
+// Helper function to filter drama details
+const filterDramaDetails = (data) => {
+  return {
+    id: data.id,
+    title: data.title,
+    thumbnail: data.thumbnail,
+    description: data.description,
+    releaseDate: data.releaseDate,
+    country: data.country,
+    status: data.status,
+    type: data.type,
+    episodesCount: data.episodesCount,
+    episodes: data.episodes ? data.episodes.map(ep => ({
+      id: ep.id,
+      number: ep.number,
+      sub: ep.sub
+    })) : []
+  };
+};
+
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
@@ -24,13 +56,15 @@ app.get('/', (req, res) => {
       show: '/api/DramaList/Show',
       topRating: '/api/DramaList/TopRating?ispc=true',
       mostView: '/api/DramaList/MostView?ispc=true&c=1',
+      mostSearch: '/api/DramaList/MostSearch?ispc=false',
       lastUpdate: '/api/DramaList/LastUpdate?ispc=true',
       upcoming: '/api/DramaList/Upcoming?ispc=true',
       anime: '/api/DramaList/Animate?ispc=true',
+      search: '/api/DramaList/Search?q=spirit&type=0',
+      dramaDetails: '/api/DramaList/Drama/:id?isq=true',
+      subtitles: '/api/Sub/:episodeId?kkey=KEY',
+      videoStream: '/api/Video/:dramaId/:episodeNumber',
       health: '/health'
-    },
-    notes: {
-      mostView: 'Use c=1 for category 1, c=2 for category 2, etc.'
     }
   });
 });
@@ -57,60 +91,18 @@ app.get('/api/DramaList/Show', async (req, res) => {
       responseType: 'json'
     });
 
-    res.json(response.data);
+    const filtered = response.data.map(item => ({
+      id: item.id,
+      title: item.title,
+      thumbnail: item.thumbnail
+    }));
+
+    res.json(filtered);
   } catch (error) {
     console.error('Error fetching show data:', error.message);
-    
-    if (error.code === 'ECONNABORTED') {
-      return res.status(504).json({
-        error: 'Request timeout',
-        message: 'The upstream server took too long to respond'
-      });
-    }
-    
     res.status(error.response?.status || 500).json({
       error: 'Failed to fetch show data',
-      message: error.message,
-      details: error.response?.data || null
-    });
-  }
-});
-
-// Proxy endpoint for upcoming dramas
-app.get('/api/DramaList/Upcoming', async (req, res) => {
-  try {
-    const { ispc } = req.query;
-    
-    const response = await axios.get('https://kisskh.do/api/DramaList/Upcoming', {
-      params: { ispc: ispc || 'true' },
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate',
-        'accept-language': 'en-US,en;q=0.9',
-        'cache-control': 'no-cache',
-        'referer': 'https://kisskh.do/',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 10000,
-      decompress: true,
-      responseType: 'json'
-    });
-
-    res.json(response.data);
-  } catch (error) {
-    console.error('Error fetching data:', error.message);
-    
-    if (error.code === 'ECONNABORTED') {
-      return res.status(504).json({
-        error: 'Request timeout',
-        message: 'The upstream server took too long to respond'
-      });
-    }
-    
-    res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch data',
-      message: error.message,
-      details: error.response?.data || null
+      message: error.message
     });
   }
 });
@@ -135,21 +127,12 @@ app.get('/api/DramaList/TopRating', async (req, res) => {
       responseType: 'json'
     });
 
-    res.json(response.data);
+    res.json(filterDramaList(response.data));
   } catch (error) {
     console.error('Error fetching top rating data:', error.message);
-    
-    if (error.code === 'ECONNABORTED') {
-      return res.status(504).json({
-        error: 'Request timeout',
-        message: 'The upstream server took too long to respond'
-      });
-    }
-    
     res.status(error.response?.status || 500).json({
       error: 'Failed to fetch top rating data',
-      message: error.message,
-      details: error.response?.data || null
+      message: error.message
     });
   }
 });
@@ -177,21 +160,42 @@ app.get('/api/DramaList/MostView', async (req, res) => {
       responseType: 'json'
     });
 
-    res.json(response.data);
+    res.json(filterDramaList(response.data));
   } catch (error) {
     console.error('Error fetching most viewed data:', error.message);
-    
-    if (error.code === 'ECONNABORTED') {
-      return res.status(504).json({
-        error: 'Request timeout',
-        message: 'The upstream server took too long to respond'
-      });
-    }
-    
     res.status(error.response?.status || 500).json({
       error: 'Failed to fetch most viewed data',
-      message: error.message,
-      details: error.response?.data || null
+      message: error.message
+    });
+  }
+});
+
+// Proxy endpoint for most searched shows
+app.get('/api/DramaList/MostSearch', async (req, res) => {
+  try {
+    const { ispc } = req.query;
+    
+    const response = await axios.get('https://kisskh.do/api/DramaList/MostSearch', {
+      params: { ispc: ispc || 'false' },
+      headers: {
+        'accept': 'application/json, text/plain, */*',
+        'accept-encoding': 'gzip, deflate',
+        'accept-language': 'en-US,en;q=0.9',
+        'cache-control': 'no-cache',
+        'referer': 'https://kisskh.do/',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 10000,
+      decompress: true,
+      responseType: 'json'
+    });
+
+    res.json(filterDramaList(response.data));
+  } catch (error) {
+    console.error('Error fetching most search data:', error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to fetch most search data',
+      message: error.message
     });
   }
 });
@@ -216,21 +220,42 @@ app.get('/api/DramaList/LastUpdate', async (req, res) => {
       responseType: 'json'
     });
 
-    res.json(response.data);
+    res.json(filterDramaList(response.data));
   } catch (error) {
     console.error('Error fetching last update data:', error.message);
-    
-    if (error.code === 'ECONNABORTED') {
-      return res.status(504).json({
-        error: 'Request timeout',
-        message: 'The upstream server took too long to respond'
-      });
-    }
-    
     res.status(error.response?.status || 500).json({
       error: 'Failed to fetch last update data',
-      message: error.message,
-      details: error.response?.data || null
+      message: error.message
+    });
+  }
+});
+
+// Proxy endpoint for upcoming dramas
+app.get('/api/DramaList/Upcoming', async (req, res) => {
+  try {
+    const { ispc } = req.query;
+    
+    const response = await axios.get('https://kisskh.do/api/DramaList/Upcoming', {
+      params: { ispc: ispc || 'true' },
+      headers: {
+        'accept': 'application/json, text/plain, */*',
+        'accept-encoding': 'gzip, deflate',
+        'accept-language': 'en-US,en;q=0.9',
+        'cache-control': 'no-cache',
+        'referer': 'https://kisskh.do/',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 10000,
+      decompress: true,
+      responseType: 'json'
+    });
+
+    res.json(filterDramaList(response.data));
+  } catch (error) {
+    console.error('Error fetching upcoming data:', error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to fetch upcoming data',
+      message: error.message
     });
   }
 });
@@ -255,21 +280,143 @@ app.get('/api/DramaList/Animate', async (req, res) => {
       responseType: 'json'
     });
 
-    res.json(response.data);
+    res.json(filterDramaList(response.data));
   } catch (error) {
     console.error('Error fetching anime data:', error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to fetch anime data',
+      message: error.message
+    });
+  }
+});
+
+// Proxy endpoint for search
+app.get('/api/DramaList/Search', async (req, res) => {
+  try {
+    const { q, type } = req.query;
     
-    if (error.code === 'ECONNABORTED') {
-      return res.status(504).json({
-        error: 'Request timeout',
-        message: 'The upstream server took too long to respond'
+    const response = await axios.get('https://kisskh.do/api/DramaList/Search', {
+      params: { 
+        q: q || '',
+        type: type || '0'
+      },
+      headers: {
+        'accept': 'application/json, text/plain, */*',
+        'accept-encoding': 'gzip, deflate',
+        'accept-language': 'en-US,en;q=0.9',
+        'cache-control': 'no-cache',
+        'referer': 'https://kisskh.do/',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 10000,
+      decompress: true,
+      responseType: 'json'
+    });
+
+    res.json(filterDramaList(response.data));
+  } catch (error) {
+    console.error('Error fetching search data:', error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to fetch search data',
+      message: error.message
+    });
+  }
+});
+
+// Proxy endpoint for drama details
+app.get('/api/DramaList/Drama/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isq } = req.query;
+    
+    const response = await axios.get(`https://kisskh.do/api/DramaList/Drama/${id}`, {
+      params: { isq: isq || 'true' },
+      headers: {
+        'accept': 'application/json, text/plain, */*',
+        'accept-encoding': 'gzip, deflate',
+        'accept-language': 'en-US,en;q=0.9',
+        'cache-control': 'no-cache',
+        'referer': 'https://kisskh.do/',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 10000,
+      decompress: true,
+      responseType: 'json'
+    });
+
+    res.json(filterDramaDetails(response.data));
+  } catch (error) {
+    console.error('Error fetching drama details:', error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to fetch drama details',
+      message: error.message
+    });
+  }
+});
+
+// Proxy endpoint for subtitles
+app.get('/api/Sub/:episodeId', async (req, res) => {
+  try {
+    const { episodeId } = req.params;
+    const { kkey } = req.query;
+    
+    if (!kkey) {
+      return res.status(400).json({
+        error: 'Bad Request',
+        message: 'kkey parameter is required'
       });
     }
     
+    const response = await axios.get(`https://kisskh.do/api/Sub/${episodeId}`, {
+      params: { kkey },
+      headers: {
+        'accept': 'application/json, text/plain, */*',
+        'accept-encoding': 'gzip, deflate',
+        'accept-language': 'en-US,en;q=0.9',
+        'cache-control': 'no-cache',
+        'referer': 'https://kisskh.do/',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 10000,
+      decompress: true,
+      responseType: 'json'
+    });
+
+    const filtered = response.data.map(sub => ({
+      src: sub.src,
+      label: sub.label,
+      language: sub.land,
+      default: sub.default
+    }));
+
+    res.json(filtered);
+  } catch (error) {
+    console.error('Error fetching subtitles:', error.message);
     res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch anime data',
-      message: error.message,
-      details: error.response?.data || null
+      error: 'Failed to fetch subtitles',
+      message: error.message
+    });
+  }
+});
+
+// Video stream URL generator
+app.get('/api/Video/:dramaId/:episodeNumber', (req, res) => {
+  try {
+    const { dramaId, episodeNumber } = req.params;
+    
+    const streamUrl = `https://hls.cdnvideo11.shop/hls07/${dramaId}/Ep${episodeNumber}_index.m3u8`;
+    
+    res.json({
+      dramaId,
+      episodeNumber,
+      streamUrl,
+      type: 'hls'
+    });
+  } catch (error) {
+    console.error('Error generating video URL:', error.message);
+    res.status(500).json({
+      error: 'Failed to generate video URL',
+      message: error.message
     });
   }
 });
@@ -278,17 +425,7 @@ app.get('/api/DramaList/Animate', async (req, res) => {
 app.use((req, res) => {
   res.status(404).json({
     error: 'Not Found',
-    message: `Route ${req.method} ${req.path} not found`,
-    availableEndpoints: [
-      '/',
-      '/health',
-      '/api/DramaList/Show',
-      '/api/DramaList/TopRating',
-      '/api/DramaList/MostView',
-      '/api/DramaList/LastUpdate',
-      '/api/DramaList/Upcoming',
-      '/api/DramaList/Animate'
-    ]
+    message: `Route ${req.method} ${req.path} not found`
   });
 });
 
