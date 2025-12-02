@@ -400,17 +400,20 @@ app.get('/api/Sub/:episodeId', async (req, res) => {
 });
 
 // Video stream URL generator
-app.get('/api/Video/:dramaId/:episodeNumber', (req, res) => {
+// IMPORTANT: episodeId is the episode ID from drama details, NOT the drama ID
+app.get('/api/Video/:episodeId/:episodeNumber', (req, res) => {
   try {
-    const { dramaId, episodeNumber } = req.params;
+    const { episodeId, episodeNumber } = req.params;
     
-    const streamUrl = `https://hls.cdnvideo11.shop/hls07/${dramaId}/Ep${episodeNumber}_index.m3u8`;
+    // Generate HLS stream URL using episode ID
+    const streamUrl = `https://hls.cdnvideo11.shop/hls07/${episodeId}/Ep${episodeNumber}_index.m3u8`;
     
     res.json({
-      dramaId,
+      episodeId,
       episodeNumber,
       streamUrl,
-      type: 'hls'
+      type: 'hls',
+      note: 'Use episodeId from drama details episodes array, not dramaId'
     });
   } catch (error) {
     console.error('Error generating video URL:', error.message);
