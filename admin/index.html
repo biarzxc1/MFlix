@@ -247,6 +247,109 @@
         </div>
     </main>
 
+    <!-- Edit Modal -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800">
+                <h2 class="text-xl font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                    <span class="material-icons">edit</span>
+                    Edit Anime
+                </h2>
+                <button onclick="closeEditModal()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                    <span class="material-icons text-gray-700 dark:text-gray-300">close</span>
+                </button>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="editAnimeId">
+                
+                <!-- Anime Info Display -->
+                <div id="editAnimeInfo" class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"></div>
+
+                <!-- Category Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Category
+                    </label>
+                    <select 
+                        id="editCategory" 
+                        class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                    >
+                        <option value="NEWEST">Newest</option>
+                        <option value="POPULAR">Popular</option>
+                        <option value="TOP_RATED">Top Rated</option>
+                        <option value="UPCOMING">Upcoming</option>
+                    </select>
+                </div>
+
+                <!-- Servers Section -->
+                <div class="space-y-3">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Streaming Servers
+                    </label>
+                    
+                    <!-- Server 1 -->
+                    <div class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="material-icons text-blue-600">play_circle</span>
+                            <h4 class="font-medium text-gray-900 dark:text-white">Server 1</h4>
+                        </div>
+                        <input 
+                            type="url" 
+                            id="editServer1Url" 
+                            placeholder="https://example.com/video.mp4"
+                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none mb-2"
+                        >
+                        <input 
+                            type="text" 
+                            id="editServer1Quality" 
+                            placeholder="Quality (e.g., 1080p, 720p)"
+                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                        >
+                    </div>
+
+                    <!-- Server 2 -->
+                    <div class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="material-icons text-green-600">play_circle</span>
+                            <h4 class="font-medium text-gray-900 dark:text-white">Server 2</h4>
+                        </div>
+                        <input 
+                            type="url" 
+                            id="editServer2Url" 
+                            placeholder="https://example.com/video.mp4"
+                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none mb-2"
+                        >
+                        <input 
+                            type="text" 
+                            id="editServer2Quality" 
+                            placeholder="Quality (e.g., 1080p, 720p)"
+                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                        >
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-3 pt-4">
+                    <button 
+                        onclick="updateAnime()" 
+                        id="updateAnimeBtn"
+                        class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <span class="material-icons">save</span>
+                        Save Changes
+                    </button>
+                    <button 
+                        onclick="closeEditModal()" 
+                        class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-lg hidden transition-all transform z-50">
         <div class="flex items-center gap-3">
@@ -493,10 +596,16 @@
                                         <div class="text-xs text-gray-600 dark:text-gray-400 mb-2">
                                             Servers: ${anime.servers?.length || 0}
                                         </div>
-                                        <button onclick="deleteAnime('${anime._id}')" class="w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition flex items-center justify-center gap-1">
-                                            <span class="material-icons text-sm">delete</span>
-                                            Delete
-                                        </button>
+                                        <div class="flex gap-2">
+                                            <button onclick='editAnime(${JSON.stringify(anime).replace(/'/g, "&#39;")})' class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition flex items-center justify-center gap-1">
+                                                <span class="material-icons text-sm">edit</span>
+                                                Edit
+                                            </button>
+                                            <button onclick="deleteAnime('${anime._id}')" class="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition flex items-center justify-center gap-1">
+                                                <span class="material-icons text-sm">delete</span>
+                                                Delete
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             `).join('')}
@@ -531,6 +640,94 @@
             } catch (error) {
                 console.error('Delete error:', error);
                 showToast('Error deleting anime', 'error');
+            }
+        }
+
+        // Edit Anime
+        function editAnime(anime) {
+            console.log('Editing anime:', anime);
+            
+            // Set anime ID
+            document.getElementById('editAnimeId').value = anime._id;
+            
+            // Display anime info
+            document.getElementById('editAnimeInfo').innerHTML = `
+                <div class="flex gap-4">
+                    <img src="${anime.coverImage?.medium || anime.coverImage?.large || ''}" alt="${anime.title?.romaji || 'Unknown'}" class="w-20 h-28 object-cover rounded" onerror="this.src='https://via.placeholder.com/80x112?text=No+Image'">
+                    <div>
+                        <h3 class="font-medium text-gray-900 dark:text-white mb-2">${anime.title?.romaji || 'Unknown Title'}</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Episodes: ${anime.episodes || 'Unknown'}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Score: ${anime.averageScore || 'N/A'}/100</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Status: ${anime.status || 'Unknown'}</p>
+                    </div>
+                </div>
+            `;
+            
+            // Set category
+            document.getElementById('editCategory').value = anime.category || 'NEWEST';
+            
+            // Set servers
+            const server1 = anime.servers?.find(s => s.name === 'server1') || {};
+            const server2 = anime.servers?.find(s => s.name === 'server2') || {};
+            
+            document.getElementById('editServer1Url').value = server1.url || '';
+            document.getElementById('editServer1Quality').value = server1.quality || '';
+            document.getElementById('editServer2Url').value = server2.url || '';
+            document.getElementById('editServer2Quality').value = server2.quality || '';
+            
+            // Show modal
+            showElement('editModal');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close Edit Modal
+        function closeEditModal() {
+            hideElement('editModal');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Update Anime
+        async function updateAnime() {
+            const id = document.getElementById('editAnimeId').value;
+            const category = document.getElementById('editCategory').value;
+            const server1Url = document.getElementById('editServer1Url').value.trim();
+            const server1Quality = document.getElementById('editServer1Quality').value.trim();
+            const server2Url = document.getElementById('editServer2Url').value.trim();
+            const server2Quality = document.getElementById('editServer2Quality').value.trim();
+
+            const servers = [];
+            if (server1Url) servers.push({ name: 'server1', url: server1Url, quality: server1Quality || 'HD', isActive: true });
+            if (server2Url) servers.push({ name: 'server2', url: server2Url, quality: server2Quality || 'HD', isActive: true });
+
+            const updateBtn = document.getElementById('updateAnimeBtn');
+            updateBtn.disabled = true;
+            updateBtn.innerHTML = '<span class="material-icons animate-spin">refresh</span> Saving...';
+
+            try {
+                console.log('Updating anime:', { id, category, servers });
+                const response = await fetch(`${API_URL}/anime/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category, servers })
+                });
+
+                const data = await response.json();
+                console.log('Update response:', data);
+
+                if (data.success) {
+                    showToast('Anime updated successfully!');
+                    closeEditModal();
+                    loadAnimeList();
+                    loadStats();
+                } else {
+                    showToast(data.error || 'Failed to update anime', 'error');
+                }
+            } catch (error) {
+                console.error('Update error:', error);
+                showToast('Error updating anime. Please try again.', 'error');
+            } finally {
+                updateBtn.disabled = false;
+                updateBtn.innerHTML = '<span class="material-icons">save</span> Save Changes';
             }
         }
 
