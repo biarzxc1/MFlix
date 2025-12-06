@@ -13,10 +13,10 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-app.use(express.static('admin'));
+app.use(express.static('public'));
 
 // ==================== MONGODB CONNECTION ====================
-const uri = "mongodb+srv://mflixph:XaneKath1@mflixph.wngbqmu.mongodb.net/mflix?appName=mflixph";
+const uri = "mongodb+srv://mflixph:XaneKath1@cluster0.vmagfpx.mongodb.net/?appName=Cluster0";
 const clientOptions = { 
   serverApi: { version: '1', strict: false, deprecationErrors: true } 
 };
@@ -46,7 +46,6 @@ const animeSchema = new mongoose.Schema({
     servers: [{
       name: { type: String, required: true },
       url: { type: String, required: true }, // Can be direct URL or iframe embed
-      quality: String,
       isActive: { type: Boolean, default: true },
       type: { type: String, enum: ['direct', 'embed'], default: 'direct' } // Type of URL
     }]
@@ -354,7 +353,7 @@ app.get('/api/search', async (req, res) => {
       anilistId: anime.id,
       title: anime.title,
       description: anime.description,
-    'public'mage: anime.coverImage,
+      coverImage: anime.coverImage,
       bannerImage: anime.bannerImage,
       genres: anime.genres,
       tags: anime.tags?.map(t => t.name) || [],
