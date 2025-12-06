@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MFlix Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        * { font-family: 'Roboto', sans-serif; }
+        .dark { color-scheme: dark; }
+        .material-icons { vertical-align: middle; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    
+    <!-- Top App Bar -->
+    <header class="bg-white dark:bg-gray-800 shadow-md fixed top-0 left-0 right-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="material-icons text-blue-600 dark:text-blue-400 text-3xl">movie</span>
+                <h1 class="text-2xl font-medium text-gray-900 dark:text-white">MFlix Admin</h1>
+            </div>
+            <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                <span class="material-icons text-gray-700 dark:text-gray-300">dark_mode</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Total Anime</p>
+                        <p id="totalAnime" class="text-3xl font-medium text-gray-900 dark:text-white mt-2">0</p>
+                    </div>
+                    <span class="material-icons text-blue-600 dark:text-blue-400 text-4xl">video_library</span>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Popular</p>
+                        <p id="popularCount" class="text-3xl font-medium text-gray-900 dark:text-white mt-2">0</p>
+                    </div>
+                    <span class="material-icons text-green-600 dark:text-green-400 text-4xl">trending_up</span>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Newest</p>
+                        <p id="newestCount" class="text-3xl font-medium text-gray-900 dark:text-white mt-2">0</p>
+                    </div>
+                    <span class="material-icons text-purple-600 dark:text-purple-400 text-4xl">new_releases</span>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Top Rated</p>
+                        <p id="topRatedCount" class="text-3xl font-medium text-gray-900 dark:text-white mt-2">0</p>
+                    </div>
+                    <span class="material-icons text-orange-600 dark:text-orange-400 text-4xl">star</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Anime Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-8">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-xl font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                    <span class="material-icons">add_circle</span>
+                    Add New Anime
+                </h2>
+            </div>
+            <div class="p-6">
+                <!-- Search AniList -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Search AniList
+                    </label>
+                    <div class="flex gap-2">
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            placeholder="Search anime on AniList..."
+                            class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                        >
+                        <button 
+                            onclick="searchAniList()" 
+                            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition"
+                        >
+                            <span class="material-icons">search</span>
+                            Search
+                        </button>
+                    </div>
+                    <div id="searchResults" class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                </div>
+
+                <!-- Add Form (hidden initially) -->
+                <div id="addForm" class="hidden">
+                    <div class="border-t border-gray-200 dark:border-gray-700 pt-6 space-y-4">
+                        <input type="hidden" id="selectedAnilistId">
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Selected Anime
+                            </label>
+                            <div id="selectedAnimeInfo" class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"></div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Category
+                            </label>
+                            <select 
+                                id="category" 
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                            >
+                                <option value="NEWEST">Newest</option>
+                                <option value="POPULAR">Popular</option>
+                                <option value="TOP_RATED">Top Rated</option>
+                                <option value="UPCOMING">Upcoming</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Streaming Servers
+                            </label>
+                            
+                            <!-- Server 1 -->
+                            <div class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="material-icons text-blue-600">play_circle</span>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">Server 1</h4>
+                                </div>
+                                <input 
+                                    type="url" 
+                                    id="server1Url" 
+                                    placeholder="https://example.com/video.mp4"
+                                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none mb-2"
+                                >
+                                <input 
+                                    type="text" 
+                                    id="server1Quality" 
+                                    placeholder="Quality (e.g., 1080p, 720p)"
+                                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                                >
+                            </div>
+
+                            <!-- Server 2 -->
+                            <div class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="material-icons text-green-600">play_circle</span>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">Server 2</h4>
+                                </div>
+                                <input 
+                                    type="url" 
+                                    id="server2Url" 
+                                    placeholder="https://example.com/video.mp4"
+                                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none mb-2"
+                                >
+                                <input 
+                                    type="text" 
+                                    id="server2Quality" 
+                                    placeholder="Quality (e.g., 1080p, 720p)"
+                                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button 
+                                onclick="addAnime()" 
+                                class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 transition"
+                            >
+                                <span class="material-icons">save</span>
+                                Add to Database
+                            </button>
+                            <button 
+                                onclick="cancelAdd()" 
+                                class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Anime List -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <h2 class="text-xl font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                    <span class="material-icons">list</span>
+                    Anime Library
+                </h2>
+                <button 
+                    onclick="loadAnimeList()" 
+                    class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                >
+                    <span class="material-icons text-gray-700 dark:text-gray-300">refresh</span>
+                </button>
+            </div>
+            <div id="animeList" class="p-6"></div>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-lg hidden transition-all transform">
+        <div class="flex items-center gap-3">
+            <span id="toastIcon" class="material-icons"></span>
+            <span id="toastMessage" class="text-sm font-medium"></span>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+            themeToggle.querySelector('.material-icons').textContent = 'light_mode';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            localStorage.theme = html.classList.contains('dark') ? 'dark' : 'light';
+            themeToggle.querySelector('.material-icons').textContent = html.classList.contains('dark') ? 'light_mode' : 'dark_mode';
+        });
+
+        // Toast Notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const msg = document.getElementById('toastMessage');
+            
+            toast.className = 'fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-lg transition-all transform';
+            
+            if (type === 'success') {
+                toast.classList.add('bg-green-600', 'text-white');
+                icon.textContent = 'check_circle';
+            } else {
+                toast.classList.add('bg-red-600', 'text-white');
+                icon.textContent = 'error';
+            }
+            
+            msg.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Search AniList
+        async function searchAniList() {
+            const query = document.getElementById('searchInput').value;
+            if (!query) return;
+
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '<div class="col-span-full text-center py-4"><span class="material-icons animate-spin text-4xl text-blue-600">refresh</span></div>';
+
+            try {
+                const response = await fetch(`${API_URL}/search?query=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                if (data.success && data.data.length > 0) {
+                    resultsDiv.innerHTML = data.data.map(anime => `
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition" onclick='selectAnime(${JSON.stringify(anime)})'>
+                            <img src="${anime.coverImage.large}" alt="${anime.title.romaji}" class="w-full h-48 object-cover">
+                            <div class="p-4">
+                                <h3 class="font-medium text-gray-900 dark:text-white mb-1 line-clamp-1">${anime.title.romaji}</h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">⭐ ${anime.averageScore || 'N/A'}/100</p>
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    ${anime.genres.slice(0, 2).map(g => `<span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">${g}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    resultsDiv.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8">No results found</div>';
+                }
+            } catch (error) {
+                showToast('Error searching anime', 'error');
+                resultsDiv.innerHTML = '';
+            }
+        }
+
+        // Select Anime
+        function selectAnime(anime) {
+            document.getElementById('selectedAnilistId').value = anime.anilistId;
+            document.getElementById('addForm').classList.remove('hidden');
+            document.getElementById('selectedAnimeInfo').innerHTML = `
+                <div class="flex gap-4">
+                    <img src="${anime.coverImage.medium}" alt="${anime.title.romaji}" class="w-20 h-28 object-cover rounded">
+                    <div>
+                        <h3 class="font-medium text-gray-900 dark:text-white mb-2">${anime.title.romaji}</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Episodes: ${anime.episodes || 'Unknown'}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Score: ${anime.averageScore || 'N/A'}/100</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('searchResults').innerHTML = '';
+            document.getElementById('searchInput').value = '';
+        }
+
+        // Cancel Add
+        function cancelAdd() {
+            document.getElementById('addForm').classList.add('hidden');
+            document.getElementById('server1Url').value = '';
+            document.getElementById('server1Quality').value = '';
+            document.getElementById('server2Url').value = '';
+            document.getElementById('server2Quality').value = '';
+        }
+
+        // Add Anime
+        async function addAnime() {
+            const anilistId = document.getElementById('selectedAnilistId').value;
+            const category = document.getElementById('category').value;
+            const server1Url = document.getElementById('server1Url').value;
+            const server1Quality = document.getElementById('server1Quality').value;
+            const server2Url = document.getElementById('server2Url').value;
+            const server2Quality = document.getElementById('server2Quality').value;
+
+            const servers = [];
+            if (server1Url) servers.push({ name: 'server1', url: server1Url, quality: server1Quality || 'HD' });
+            if (server2Url) servers.push({ name: 'server2', url: server2Url, quality: server2Quality || 'HD' });
+
+            try {
+                const response = await fetch(`${API_URL}/anime`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ anilistId, category, servers })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Anime added successfully!');
+                    cancelAdd();
+                    loadAnimeList();
+                    loadStats();
+                } else {
+                    showToast(data.error || 'Failed to add anime', 'error');
+                }
+            } catch (error) {
+                showToast('Error adding anime', 'error');
+            }
+        }
+
+        // Load Anime List
+        async function loadAnimeList() {
+            const listDiv = document.getElementById('animeList');
+            listDiv.innerHTML = '<div class="text-center py-8"><span class="material-icons animate-spin text-4xl text-blue-600">refresh</span></div>';
+
+            try {
+                const response = await fetch(`${API_URL}/anime?limit=50`);
+                const data = await response.json();
+
+                if (data.success && data.data.length > 0) {
+                    listDiv.innerHTML = `
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            ${data.data.map(anime => `
+                                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
+                                    <img src="${anime.coverImage.large}" alt="${anime.title.romaji}" class="w-full h-48 object-cover">
+                                    <div class="p-4">
+                                        <h3 class="font-medium text-gray-900 dark:text-white mb-2 line-clamp-2">${anime.title.romaji}</h3>
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">${anime.category}</span>
+                                            <span class="text-sm text-gray-600 dark:text-gray-400">⭐ ${anime.averageScore || 'N/A'}</span>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button onclick="deleteAnime('${anime._id}')" class="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition flex items-center justify-center gap-1">
+                                                <span class="material-icons text-sm">delete</span>
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    listDiv.innerHTML = '<div class="text-center text-gray-500 py-8">No anime in database</div>';
+                }
+            } catch (error) {
+                listDiv.innerHTML = '<div class="text-center text-red-500 py-8">Error loading anime</div>';
+            }
+        }
+
+        // Delete Anime
+        async function deleteAnime(id) {
+            if (!confirm('Are you sure you want to delete this anime?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/anime/${id}`, { method: 'DELETE' });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Anime deleted successfully!');
+                    loadAnimeList();
+                    loadStats();
+                } else {
+                    showToast('Failed to delete anime', 'error');
+                }
+            } catch (error) {
+                showToast('Error deleting anime', 'error');
+            }
+        }
+
+        // Load Stats
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_URL}/anime?limit=1000`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const anime = data.data;
+                    document.getElementById('totalAnime').textContent = anime.length;
+                    document.getElementById('popularCount').textContent = anime.filter(a => a.category === 'POPULAR').length;
+                    document.getElementById('newestCount').textContent = anime.filter(a => a.category === 'NEWEST').length;
+                    document.getElementById('topRatedCount').textContent = anime.filter(a => a.category === 'TOP_RATED').length;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Enter key for search
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchAniList();
+        });
+
+        // Initial Load
+        loadAnimeList();
+        loadStats();
+    </script>
+</body>
+</html>
