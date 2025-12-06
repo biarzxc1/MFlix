@@ -42,8 +42,7 @@ const contentSchema = new mongoose.Schema({
   servers: [{
     name: { type: String, enum: ['server1', 'server2'] },
     url: String,
-    episode: Number,
-    quality: String
+    episode: Number
   }],
   trailer: {
     id: String,
@@ -228,8 +227,7 @@ app.get('/public/watch/:id', async (req, res) => {
       }
       serversByEpisode[server.episode].push({
         name: server.name,
-        url: server.url,
-        quality: server.quality || 'HD'
+        url: server.url
       });
     });
     
@@ -275,8 +273,7 @@ app.get('/public/watch/:id/episode/:episode', async (req, res) => {
       totalEpisodes: content.episodes,
       servers: servers.map(s => ({
         name: s.name,
-        url: s.url,
-        quality: s.quality || 'HD'
+        url: s.url
       }))
     });
   } catch (error) {
@@ -682,7 +679,7 @@ app.delete('/api/content/:id', async (req, res) => {
 // Add or update server link
 app.post('/api/content/:id/servers', async (req, res) => {
   try {
-    const { serverName, url, episode = 1, quality = 'HD' } = req.body;
+    const { serverName, url, episode = 1 } = req.body;
 
     if (!['server1', 'server2'].includes(serverName)) {
       return res.status(400).json({ 
@@ -703,9 +700,8 @@ app.post('/api/content/:id/servers', async (req, res) => {
 
     if (existingServerIndex !== -1) {
       content.servers[existingServerIndex].url = url;
-      content.servers[existingServerIndex].quality = quality;
     } else {
-      content.servers.push({ name: serverName, url, episode, quality });
+      content.servers.push({ name: serverName, url, episode });
     }
 
     content.updatedAt = Date.now();
@@ -747,13 +743,11 @@ app.post('/api/content/:id/servers/bulk', async (req, res) => {
 
       if (existingIndex !== -1) {
         content.servers[existingIndex].url = server.url;
-        content.servers[existingIndex].quality = server.quality || 'HD';
       } else {
         content.servers.push({ 
           name: server.serverName, 
           url: server.url, 
-          episode: server.episode,
-          quality: server.quality || 'HD'
+          episode: server.episode
         });
       }
     });
