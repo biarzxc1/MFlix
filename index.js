@@ -1,449 +1,532 @@
-// index.js
+// server.js
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
 const axios = require('axios');
+const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
-// CORS configuration
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
+// Middleware
+app.use(cors());
 app.use(express.json());
+app.use(express.static('public'));
 
-// Helper function to filter drama list data
-const filterDramaList = (items) => {
-  return items.map(item => ({
-    id: item.id,
-    title: item.title,
-    thumbnail: item.thumbnail,
-    episodesCount: item.episodesCount,
-    label: item.label,
-    favoriteID: item.favoriteID
-  }));
+// MongoDB Connection
+const uri = "mongodb+srv://mflixph:XaneKath1@mflixph.wngbqmu.mongodb.net/mflix?appName=mflixph";
+const clientOptions = { 
+  serverApi: { version: '1', strict: false, deprecationErrors: true }
 };
 
-// Helper function to filter drama details
-const filterDramaDetails = (data) => {
-  return {
-    id: data.id,
-    title: data.title,
-    thumbnail: data.thumbnail,
-    description: data.description,
-    releaseDate: data.releaseDate,
-    country: data.country,
-    status: data.status,
-    type: data.type,
-    episodesCount: data.episodesCount,
-    episodes: data.episodes ? data.episodes.map(ep => ({
-      id: ep.id,
-      number: ep.number,
-      sub: ep.sub
-    })) : []
-  };
-};
+mongoose.connect(uri, clientOptions)
+  .then(() => console.log('✅ Connected to MongoDB!'))
+  .catch(err => console.error('❌ MongoDB connection error:', err));
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({
-    status: 'running',
-    message: 'KissKH API Proxy',
-    endpoints: {
-      show: '/api/DramaList/Show',
-      topRating: '/api/DramaList/TopRating?ispc=true',
-      mostView: '/api/DramaList/MostView?ispc=true&c=1',
-      mostSearch: '/api/DramaList/MostSearch?ispc=false',
-      lastUpdate: '/api/DramaList/LastUpdate?ispc=true',
-      upcoming: '/api/DramaList/Upcoming?ispc=true',
-      anime: '/api/DramaList/Animate?ispc=true',
-      search: '/api/DramaList/Search?q=spirit&type=0',
-      dramaDetails: '/api/DramaList/Drama/:id?isq=true',
-      subtitles: '/api/Sub/:episodeId?kkey=KEY',
-      videoStream: '/api/Video/:dramaId/:episodeNumber',
-      health: '/health'
+// ==================== SCHEMAS ====================
+
+// Content Schema
+const contentSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  type: { 
+    type: String, 
+    enum: ['ANIME', 'MOVIE', 'KDRAMA', 'SERIES', 'CDRAMA', 'JDRAMA'],
+    required: true 
+  },
+  
+  // AniList Data
+  anilistId: { type: Number, unique: true, sparse: true },
+  coverImage: String,
+  bannerImage: String,
+  description: String,
+  genres: [String],
+  tags: [String],
+  episodes: Number,
+  duration: Number,
+  status: String,
+  season: String,
+  seasonYear: Number,
+  averageScore: Number,
+  popularity: Number,
+  studios: [String],
+  
+  // Streaming Links
+  servers: [{
+    serverName: { type: String, enum: ['server1', 'server2'], required: true },
+    episodes: [{
+      episodeNumber: { type: Number, required: true },
+      title: String,
+      url: { type: String, required: true },
+      uploadedAt: { type: Date, default: Date.now }
+    }]
+  }],
+  
+  // Categories
+  category: { 
+    type: String, 
+    enum: ['newest', 'popular', 'toprated', 'none'],
+    default: 'none'
+  },
+  
+  // Additional Info
+  rating: { type: String, default: 'PG-13' },
+  releaseDate: Date,
+  trailer: String,
+  
+  // Metadata
+  views: { type: Number, default: 0 },
+  likes: { type: Number, default: 0 },
+  featured: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const Content = mongoose.model('Content', contentSchema);
+
+// ==================== ANILIST GRAPHQL API ====================
+
+const ANILIST_API = 'https://graphql.anilist.co';
+
+async function searchAniList(query, type = 'ANIME') {
+  const graphqlQuery = `
+    query ($search: String, $type: MediaType) {
+      Page(page: 1, perPage: 10) {
+        media(search: $search, type: $type) {
+          id
+          title {
+            romaji
+            english
+            native
+          }
+          coverImage {
+            large
+            extraLarge
+          }
+          bannerImage
+          description
+          genres
+          tags {
+            name
+          }
+          episodes
+          duration
+          status
+          season
+          seasonYear
+          averageScore
+          popularity
+          studios {
+            nodes {
+              name
+            }
+          }
+          startDate {
+            year
+            month
+            day
+          }
+          trailer {
+            id
+            site
+          }
+        }
+      }
     }
-  });
-});
+  `;
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Proxy endpoint for hero section shows
-app.get('/api/DramaList/Show', async (req, res) => {
   try {
-    const response = await axios.get('https://kisskh.do/api/DramaList/Show', {
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate',
-        'accept-language': 'en-US,en;q=0.9',
-        'cache-control': 'no-cache',
-        'referer': 'https://kisskh.do/',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 10000,
-      decompress: true,
-      responseType: 'json'
+    const response = await axios.post(ANILIST_API, {
+      query: graphqlQuery,
+      variables: { search: query, type }
     });
-
-    const filtered = response.data.map(item => ({
-      id: item.id,
-      title: item.title,
-      thumbnail: item.thumbnail
-    }));
-
-    res.json(filtered);
+    return response.data.data.Page.media;
   } catch (error) {
-    console.error('Error fetching show data:', error.message);
-    res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch show data',
-      message: error.message
-    });
+    console.error('AniList API Error:', error.message);
+    return [];
   }
-});
+}
 
-// Proxy endpoint for top rated shows
-app.get('/api/DramaList/TopRating', async (req, res) => {
+async function getAniListDetails(id) {
+  const graphqlQuery = `
+    query ($id: Int) {
+      Media(id: $id) {
+        id
+        title {
+          romaji
+          english
+          native
+        }
+        coverImage {
+          large
+          extraLarge
+        }
+        bannerImage
+        description
+        genres
+        tags {
+          name
+        }
+        episodes
+        duration
+        status
+        season
+        seasonYear
+        averageScore
+        popularity
+        studios {
+          nodes {
+            name
+          }
+        }
+        startDate {
+          year
+          month
+          day
+        }
+        trailer {
+          id
+          site
+        }
+      }
+    }
+  `;
+
   try {
-    const { ispc } = req.query;
+    const response = await axios.post(ANILIST_API, {
+      query: graphqlQuery,
+      variables: { id }
+    });
+    return response.data.data.Media;
+  } catch (error) {
+    console.error('AniList API Error:', error.message);
+    return null;
+  }
+}
+
+// ==================== ADMIN API ROUTES ====================
+
+// 1. SEARCH ANILIST
+app.get('/api/admin/search/anilist', async (req, res) => {
+  try {
+    const { query, type = 'ANIME' } = req.query;
     
-    const response = await axios.get('https://kisskh.do/api/DramaList/TopRating', {
-      params: { ispc: ispc || 'true' },
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate',
-        'accept-language': 'en-US,en;q=0.9',
-        'cache-control': 'no-cache',
-        'referer': 'https://kisskh.do/',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 10000,
-      decompress: true,
-      responseType: 'json'
-    });
+    if (!query) {
+      return res.status(400).json({ error: 'Query parameter is required' });
+    }
 
-    res.json(filterDramaList(response.data));
+    const results = await searchAniList(query, type);
+    res.json({ success: true, count: results.length, data: results });
   } catch (error) {
-    console.error('Error fetching top rating data:', error.message);
-    res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch top rating data',
-      message: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Proxy endpoint for most viewed shows
-app.get('/api/DramaList/MostView', async (req, res) => {
+// 2. ADD CONTENT (Admin only)
+app.post('/api/admin/content', async (req, res) => {
   try {
-    const { ispc, c } = req.query;
-    
-    const response = await axios.get('https://kisskh.do/api/DramaList/MostView', {
-      params: { 
-        ispc: ispc || 'true',
-        c: c || '1'
-      },
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate',
-        'accept-language': 'en-US,en;q=0.9',
-        'cache-control': 'no-cache',
-        'referer': 'https://kisskh.do/',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 10000,
-      decompress: true,
-      responseType: 'json'
+    const { anilistId, title, type, servers } = req.body;
+
+    let anilistData = null;
+    if (anilistId) {
+      anilistData = await getAniListDetails(anilistId);
+    }
+
+    const content = new Content({
+      title: anilistData?.title?.english || anilistData?.title?.romaji || title,
+      type: type || 'ANIME',
+      anilistId: anilistData?.id,
+      coverImage: anilistData?.coverImage?.extraLarge,
+      bannerImage: anilistData?.bannerImage,
+      description: anilistData?.description?.replace(/<[^>]*>/g, ''),
+      genres: anilistData?.genres || [],
+      tags: anilistData?.tags?.map(t => t.name) || [],
+      episodes: anilistData?.episodes,
+      duration: anilistData?.duration,
+      status: anilistData?.status,
+      season: anilistData?.season,
+      seasonYear: anilistData?.seasonYear,
+      averageScore: anilistData?.averageScore,
+      popularity: anilistData?.popularity,
+      studios: anilistData?.studios?.nodes?.map(s => s.name) || [],
+      releaseDate: anilistData?.startDate ? 
+        new Date(anilistData.startDate.year, anilistData.startDate.month - 1, anilistData.startDate.day) : null,
+      trailer: anilistData?.trailer?.site === 'youtube' ? 
+        `https://www.youtube.com/watch?v=${anilistData.trailer.id}` : null,
+      servers: servers || [],
+      category: 'none'
     });
 
-    res.json(filterDramaList(response.data));
+    await content.save();
+    res.status(201).json({ success: true, data: content });
   } catch (error) {
-    console.error('Error fetching most viewed data:', error.message);
-    res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch most viewed data',
-      message: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Proxy endpoint for most searched shows
-app.get('/api/DramaList/MostSearch', async (req, res) => {
-  try {
-    const { ispc } = req.query;
-    
-    const response = await axios.get('https://kisskh.do/api/DramaList/MostSearch', {
-      params: { ispc: ispc || 'false' },
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate',
-        'accept-language': 'en-US,en;q=0.9',
-        'cache-control': 'no-cache',
-        'referer': 'https://kisskh.do/',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 10000,
-      decompress: true,
-      responseType: 'json'
-    });
-
-    res.json(filterDramaList(response.data));
-  } catch (error) {
-    console.error('Error fetching most search data:', error.message);
-    res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch most search data',
-      message: error.message
-    });
-  }
-});
-
-// Proxy endpoint for last updated shows
-app.get('/api/DramaList/LastUpdate', async (req, res) => {
-  try {
-    const { ispc } = req.query;
-    
-    const response = await axios.get('https://kisskh.do/api/DramaList/LastUpdate', {
-      params: { ispc: ispc || 'true' },
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate',
-        'accept-language': 'en-US,en;q=0.9',
-        'cache-control': 'no-cache',
-        'referer': 'https://kisskh.do/',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 10000,
-      decompress: true,
-      responseType: 'json'
-    });
-
-    res.json(filterDramaList(response.data));
-  } catch (error) {
-    console.error('Error fetching last update data:', error.message);
-    res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch last update data',
-      message: error.message
-    });
-  }
-});
-
-// Proxy endpoint for upcoming dramas
-app.get('/api/DramaList/Upcoming', async (req, res) => {
-  try {
-    const { ispc } = req.query;
-    
-    const response = await axios.get('https://kisskh.do/api/DramaList/Upcoming', {
-      params: { ispc: ispc || 'true' },
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate',
-        'accept-language': 'en-US,en;q=0.9',
-        'cache-control': 'no-cache',
-        'referer': 'https://kisskh.do/',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 10000,
-      decompress: true,
-      responseType: 'json'
-    });
-
-    res.json(filterDramaList(response.data));
-  } catch (error) {
-    console.error('Error fetching upcoming data:', error.message);
-    res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch upcoming data',
-      message: error.message
-    });
-  }
-});
-
-// Proxy endpoint for anime list
-app.get('/api/DramaList/Animate', async (req, res) => {
-  try {
-    const { ispc } = req.query;
-    
-    const response = await axios.get('https://kisskh.do/api/DramaList/Animate', {
-      params: { ispc: ispc || 'true' },
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate',
-        'accept-language': 'en-US,en;q=0.9',
-        'cache-control': 'no-cache',
-        'referer': 'https://kisskh.do/',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 10000,
-      decompress: true,
-      responseType: 'json'
-    });
-
-    res.json(filterDramaList(response.data));
-  } catch (error) {
-    console.error('Error fetching anime data:', error.message);
-    res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch anime data',
-      message: error.message
-    });
-  }
-});
-
-// Proxy endpoint for search
-app.get('/api/DramaList/Search', async (req, res) => {
-  try {
-    const { q, type } = req.query;
-    
-    const response = await axios.get('https://kisskh.do/api/DramaList/Search', {
-      params: { 
-        q: q || '',
-        type: type || '0'
-      },
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate',
-        'accept-language': 'en-US,en;q=0.9',
-        'cache-control': 'no-cache',
-        'referer': 'https://kisskh.do/',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 10000,
-      decompress: true,
-      responseType: 'json'
-    });
-
-    res.json(filterDramaList(response.data));
-  } catch (error) {
-    console.error('Error fetching search data:', error.message);
-    res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch search data',
-      message: error.message
-    });
-  }
-});
-
-// Proxy endpoint for drama details
-app.get('/api/DramaList/Drama/:id', async (req, res) => {
+// 3. ADD/UPDATE SERVER LINKS (Admin only)
+app.post('/api/admin/content/:id/servers', async (req, res) => {
   try {
     const { id } = req.params;
-    const { isq } = req.query;
-    
-    const response = await axios.get(`https://kisskh.do/api/DramaList/Drama/${id}`, {
-      params: { isq: isq || 'true' },
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate',
-        'accept-language': 'en-US,en;q=0.9',
-        'cache-control': 'no-cache',
-        'referer': 'https://kisskh.do/',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 10000,
-      decompress: true,
-      responseType: 'json'
-    });
+    const { serverName, episodeNumber, episodeTitle, url } = req.body;
 
-    res.json(filterDramaDetails(response.data));
-  } catch (error) {
-    console.error('Error fetching drama details:', error.message);
-    res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch drama details',
-      message: error.message
-    });
-  }
-});
+    if (!['server1', 'server2'].includes(serverName)) {
+      return res.status(400).json({ error: 'Server must be server1 or server2' });
+    }
 
-// Proxy endpoint for subtitles
-app.get('/api/Sub/:episodeId', async (req, res) => {
-  try {
-    const { episodeId } = req.params;
-    const { kkey } = req.query;
-    
-    if (!kkey) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        message: 'kkey parameter is required'
+    const content = await Content.findById(id);
+    if (!content) {
+      return res.status(404).json({ error: 'Content not found' });
+    }
+
+    let server = content.servers.find(s => s.serverName === serverName);
+    if (!server) {
+      server = { serverName, episodes: [] };
+      content.servers.push(server);
+    }
+
+    const episodeIndex = server.episodes.findIndex(e => e.episodeNumber === episodeNumber);
+    if (episodeIndex > -1) {
+      server.episodes[episodeIndex].url = url;
+      server.episodes[episodeIndex].title = episodeTitle;
+    } else {
+      server.episodes.push({
+        episodeNumber,
+        title: episodeTitle,
+        url
       });
     }
-    
-    const response = await axios.get(`https://kisskh.do/api/Sub/${episodeId}`, {
-      params: { kkey },
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate',
-        'accept-language': 'en-US,en;q=0.9',
-        'cache-control': 'no-cache',
-        'referer': 'https://kisskh.do/',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 10000,
-      decompress: true,
-      responseType: 'json'
-    });
 
-    const filtered = response.data.map(sub => ({
-      src: sub.src,
-      label: sub.label,
-      language: sub.land,
-      default: sub.default
-    }));
+    server.episodes.sort((a, b) => a.episodeNumber - b.episodeNumber);
 
-    res.json(filtered);
+    content.updatedAt = Date.now();
+    await content.save();
+
+    res.json({ success: true, data: content });
   } catch (error) {
-    console.error('Error fetching subtitles:', error.message);
-    res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch subtitles',
-      message: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Video stream URL generator
-// IMPORTANT: episodeId is the episode ID from drama details, NOT the drama ID
-app.get('/api/Video/:episodeId/:episodeNumber', (req, res) => {
+// 4. GET ALL CONTENT (Admin)
+app.get('/api/admin/content', async (req, res) => {
   try {
-    const { episodeId, episodeNumber } = req.params;
+    const { type, genre, status, featured, search, page = 1, limit = 50, category } = req.query;
     
-    // Generate HLS stream URL using episode ID
-    const streamUrl = `https://hls.cdnvideo11.shop/hls07/${episodeId}/Ep${episodeNumber}_index.m3u8`;
+    const query = {};
+    if (type) query.type = type;
+    if (status) query.status = status;
+    if (featured) query.featured = featured === 'true';
+    if (genre) query.genres = genre;
+    if (search) query.title = new RegExp(search, 'i');
+    if (category) query.category = category;
+
+    const skip = (page - 1) * limit;
     
+    let sortBy = { createdAt: -1 };
+    if (category === 'popular') sortBy = { views: -1 };
+    if (category === 'toprated') sortBy = { averageScore: -1 };
+    
+    const content = await Content.find(query)
+      .sort(sortBy)
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Content.countDocuments(query);
+
     res.json({
-      episodeId,
-      episodeNumber,
-      streamUrl,
-      type: 'hls',
-      note: 'Use episodeId from drama details episodes array, not dramaId'
+      success: true,
+      data: content,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
     });
   } catch (error) {
-    console.error('Error generating video URL:', error.message);
-    res.status(500).json({
-      error: 'Failed to generate video URL',
-      message: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Catch-all 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    error: 'Not Found',
-    message: `Route ${req.method} ${req.path} not found`
-  });
+// 5. UPDATE CONTENT CATEGORY (Admin only)
+app.put('/api/admin/content/:id/category', async (req, res) => {
+  try {
+    const { category } = req.body;
+    
+    if (!['newest', 'popular', 'toprated', 'none'].includes(category)) {
+      return res.status(400).json({ error: 'Invalid category' });
+    }
+
+    const content = await Content.findByIdAndUpdate(
+      req.params.id,
+      { category, updatedAt: Date.now() },
+      { new: true }
+    );
+
+    if (!content) {
+      return res.status(404).json({ error: 'Content not found' });
+    }
+
+    res.json({ success: true, data: content });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Error handler
-app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: err.message
+// 6. UPDATE CONTENT (Admin)
+app.put('/api/admin/content/:id', async (req, res) => {
+  try {
+    const updates = req.body;
+    updates.updatedAt = Date.now();
+    
+    const content = await Content.findByIdAndUpdate(
+      req.params.id,
+      updates,
+      { new: true }
+    );
+
+    if (!content) {
+      return res.status(404).json({ error: 'Content not found' });
+    }
+
+    res.json({ success: true, data: content });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 7. DELETE CONTENT (Admin)
+app.delete('/api/admin/content/:id', async (req, res) => {
+  try {
+    const content = await Content.findByIdAndDelete(req.params.id);
+    
+    if (!content) {
+      return res.status(404).json({ error: 'Content not found' });
+    }
+
+    res.json({ success: true, message: 'Content deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== PUBLIC API ROUTES ====================
+
+// Get content by category
+app.get('/api/content', async (req, res) => {
+  try {
+    const { type, category, page = 1, limit = 20 } = req.query;
+    
+    const query = {};
+    if (type) query.type = type;
+    if (category && category !== 'all') query.category = category;
+
+    const skip = (page - 1) * limit;
+    
+    let sortBy = { createdAt: -1 };
+    if (category === 'popular') sortBy = { views: -1 };
+    if (category === 'toprated') sortBy = { averageScore: -1 };
+    
+    const content = await Content.find(query)
+      .sort(sortBy)
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Content.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: content,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get single content
+app.get('/api/content/:id', async (req, res) => {
+  try {
+    const content = await Content.findById(req.params.id);
+    
+    if (!content) {
+      return res.status(404).json({ error: 'Content not found' });
+    }
+
+    content.views += 1;
+    await content.save();
+
+    res.json({ success: true, data: content });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get featured content
+app.get('/api/featured', async (req, res) => {
+  try {
+    const content = await Content.find({ featured: true })
+      .sort({ popularity: -1 })
+      .limit(10);
+    
+    res.json({ success: true, data: content });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Like content
+app.post('/api/content/:id/like', async (req, res) => {
+  try {
+    const content = await Content.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { likes: 1 } },
+      { new: true }
+    );
+
+    if (!content) {
+      return res.status(404).json({ error: 'Content not found' });
+    }
+
+    res.json({ success: true, likes: content.likes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/api', (req, res) => {
+  res.json({
+    message: 'Welcome to MFlix API',
+    version: '1.0.0',
+    adminEndpoints: {
+      search: 'GET /api/admin/search/anilist?query=naruto&type=ANIME',
+      addContent: 'POST /api/admin/content',
+      addServer: 'POST /api/admin/content/:id/servers',
+      updateCategory: 'PUT /api/admin/content/:id/category',
+      getAll: 'GET /api/admin/content',
+      update: 'PUT /api/admin/content/:id',
+      delete: 'DELETE /api/admin/content/:id'
+    },
+    publicEndpoints: {
+      getContent: 'GET /api/content?category=newest',
+      getOne: 'GET /api/content/:id',
+      featured: 'GET /api/featured',
+      like: 'POST /api/content/:id/like'
+    }
   });
 });
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-  console.log(`📡 API available at http://localhost:${PORT}`);
-  console.log(`🌐 Health check at http://localhost:${PORT}/health`);
+app.listen(PORT, () => {
+  console.log(`🚀 MFlix API running on port ${PORT}`);
 });
