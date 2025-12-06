@@ -473,7 +473,10 @@
                                 📤 Upload Links
                             </button>
                             <button onclick="openCategoryModal('${item._id}')" class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded-lg font-medium transition-all shadow-md">
-                                🏷️ Change Category
+                                🏷️ Category
+                            </button>
+                            <button onclick="toggleBanner('${item._id}', ${item.showInBanner})" class="px-4 py-2 ${item.showInBanner ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-500 hover:bg-gray-600'} text-white text-sm rounded-lg font-medium transition-all shadow-md">
+                                ${item.showInBanner ? '🎬 In Banner' : '➕ Add to Banner'}
                             </button>
                             <button onclick="deleteContent('${item._id}')" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg font-medium transition-all shadow-md">
                                 🗑️ Delete
@@ -588,6 +591,26 @@
                 }
             } catch (error) {
                 alert('❌ Error updating category: ' + error.message);
+            }
+        }
+
+        // Toggle Banner
+        async function toggleBanner(contentId, currentStatus) {
+            try {
+                const response = await fetch(`${API_URL}/content/${contentId}/banner`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ showInBanner: !currentStatus })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.data.showInBanner ? '✅ Added to banner!' : '✅ Removed from banner!');
+                    loadContent();
+                }
+            } catch (error) {
+                alert('❌ Error updating banner: ' + error.message);
             }
         }
 
