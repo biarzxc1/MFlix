@@ -13,7 +13,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static('admin'));
 
 // ==================== MONGODB CONNECTION ====================
 const uri = "mongodb+srv://mflixph:XaneKath1@mflixph.wngbqmu.mongodb.net/mflix?appName=mflixph";
@@ -41,7 +41,17 @@ const animeSchema = new mongoose.Schema({
   bannerImage: String,
   genres: [String],
   tags: [String],
-  episodes: Number,
+  episodes: [{
+    episodeNumber: { type: Number, required: true },
+    servers: [{
+      name: { type: String, required: true },
+      url: { type: String, required: true }, // Can be direct URL or iframe embed
+      quality: String,
+      isActive: { type: Boolean, default: true },
+      type: { type: String, enum: ['direct', 'embed'], default: 'direct' } // Type of URL
+    }]
+  }],
+  totalEpisodes: Number,
   duration: Number,
   status: String,
   season: String,
@@ -58,18 +68,32 @@ const animeSchema = new mongoose.Schema({
     enum: ['UPCOMING', 'NEWEST', 'POPULAR', 'TOP_RATED'],
     default: 'NEWEST'
   },
-  servers: [{
-    name: { type: String, required: true },
-    url: { type: String, required: true },
-    quality: String,
-    isActive: { type: Boolean, default: true }
-  }],
   
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
 
 const Anime = mongoose.model('Anime', animeSchema);
+
+// ==================== UTILITY FUNCTIONS ====================
+
+// Extract embed URL from iframe tag or return direct URL
+function extractEmbedUrl(input) {
+  if (!input) return { url: '', type: 'direct' };
+  
+  const trimmed = input.trim();
+  
+  // Check if it's an iframe tag
+  const iframeMatch = trimmed.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+  
+  if (iframeMatch) {
+    // Extract URL from iframe
+    return { url: iframeMatch[1], type: 'embed' };
+  }
+  
+  // If it's a direct URL
+  return { url: trimmed, type: 'direct' };
+}
 
 // ==================== ANILIST GRAPHQL HELPER ====================
 async function fetchFromAniList(query, variables = {}) {
@@ -149,7 +173,7 @@ app.get('/api/public/category/:category', async (req, res) => {
 
 // PUBLIC: Get single anime by ID with servers (default server1)
 // ENDPOINT: GET /api/public/anime/:id
-// Response includes all anime info + servers (server1 is default)
+// Response includes all anime info + episodes with servers (server1 is default for each episode)
 app.get('/api/public/anime/:id', async (req, res) => {
   try {
     const anime = await Anime.findById(req.params.id);
@@ -158,12 +182,17 @@ app.get('/api/public/anime/:id', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Anime not found' });
     }
     
-    // Format response with default server
+    // Format response with default server for each episode
+    const formattedEpisodes = anime.episodes.map(ep => ({
+      ...ep.toObject(),
+      defaultServer: ep.servers.find(s => s.name === 'server1') || ep.servers[0]
+    }));
+    
     const response = {
       success: true,
       data: {
         ...anime.toObject(),
-        defaultServer: anime.servers.find(s => s.name === 'server1') || anime.servers[0]
+        episodes: formattedEpisodes
       }
     };
     
@@ -265,8 +294,7 @@ app.get('/', (req, res) => {
   `);
 });
 
-// 1. ADMIN ONLY: Search anime from AniList (not your database)
-// This is used by admin to find anime to add from AniList
+// 1. Search anime from AniList
 app.get('/api/search', async (req, res) => {
   try {
     const { query, page = 1, perPage = 20 } = req.query;
@@ -326,7 +354,7 @@ app.get('/api/search', async (req, res) => {
       anilistId: anime.id,
       title: anime.title,
       description: anime.description,
-      coverImage: anime.coverImage,
+    'public'mage: anime.coverImage,
       bannerImage: anime.bannerImage,
       genres: anime.genres,
       tags: anime.tags?.map(t => t.name) || [],
@@ -431,7 +459,7 @@ app.get('/api/anime/anilist/:id', async (req, res) => {
 // 3. Add anime to database
 app.post('/api/anime', async (req, res) => {
   try {
-    const { anilistId, category, servers } = req.body;
+    const { anilistId, category, episodes } = req.body;
     
     const gqlQuery = `
       query ($id: Int) {
@@ -475,7 +503,8 @@ app.post('/api/anime', async (req, res) => {
         bannerImage: anilistData.bannerImage,
         genres: anilistData.genres,
         tags: anilistData.tags?.map(t => t.name) || [],
-        episodes: anilistData.episodes,
+        episodes: episodes || [],
+        totalEpisodes: anilistData.episodes,
         duration: anilistData.duration,
         status: anilistData.status,
         season: anilistData.season,
@@ -486,7 +515,6 @@ app.post('/api/anime', async (req, res) => {
         format: anilistData.format,
         studios: anilistData.studios?.nodes?.map(s => s.name) || [],
         category: category || 'NEWEST',
-        servers: servers || [],
         updatedAt: new Date()
       },
       { upsert: true, new: true }
@@ -502,11 +530,11 @@ app.post('/api/anime', async (req, res) => {
 app.put('/api/anime/:id/servers', async (req, res) => {
   try {
     const { id } = req.params;
-    const { servers } = req.body;
+    const { episodes } = req.body;
     
     const anime = await Anime.findByIdAndUpdate(
       id,
-      { servers, updatedAt: new Date() },
+      { episodes, updatedAt: new Date() },
       { new: true }
     );
     
@@ -520,15 +548,15 @@ app.put('/api/anime/:id/servers', async (req, res) => {
   }
 });
 
-// 4b. Update entire anime (category, servers, etc.)
+// 4b. Update entire anime (category, episodes, etc.)
 app.put('/api/anime/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { category, servers } = req.body;
+    const { category, episodes } = req.body;
     
     const updateData = { updatedAt: new Date() };
     if (category) updateData.category = category;
-    if (servers) updateData.servers = servers;
+    if (episodes) updateData.episodes = episodes;
     
     const anime = await Anime.findByIdAndUpdate(
       id,
