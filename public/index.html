@@ -1,653 +1,923 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MFLIXPH Admin</title>
+    <title>MFlix Admin Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        dark: {
-                            bg: '#0f0f0f',
-                            card: '#1a1a1a',
-                            border: '#2a2a2a',
-                            hover: '#252525'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .gradient-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        html.dark { background: #0f0f0f; }
-        html.light { background: #f9fafb; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background-color: #000000;
+            color: #ffffff;
+        }
+        
+        .card {
+            background-color: #0a0a0a;
+            border: 1px solid #1a1a1a;
+        }
+        
+        .card:hover {
+            border-color: #2a2a2a;
+        }
+        
+        .btn-primary {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        
+        .btn-primary:hover {
+            background-color: #e5e5e5;
+        }
+        
+        .btn-secondary {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            border: 1px solid #2a2a2a;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #2a2a2a;
+        }
+        
+        .input-field {
+            background-color: #0a0a0a;
+            border: 1px solid #2a2a2a;
+            color: #ffffff;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #ffffff;
+        }
+        
+        .sidebar {
+            background-color: #0a0a0a;
+            border-right: 1px solid #1a1a1a;
+        }
+        
+        .sidebar-item {
+            transition: all 0.2s;
+        }
+        
+        .sidebar-item:hover {
+            background-color: #1a1a1a;
+        }
+        
+        .sidebar-item.active {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        
+        .table-row {
+            border-bottom: 1px solid #1a1a1a;
+        }
+        
+        .table-row:hover {
+            background-color: #0a0a0a;
+        }
+        
+        .badge {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-white {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        
+        .badge-black {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            border: 1px solid #2a2a2a;
+        }
+        
+        .modal {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+        
+        .modal-content {
+            background-color: #0a0a0a;
+            border: 1px solid #2a2a2a;
+        }
+        
+        .divider {
+            border-color: #1a1a1a;
+        }
+        
+        .stat-card {
+            background-color: #0a0a0a;
+            border: 1px solid #1a1a1a;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #2a2a2a;
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-dark-bg text-gray-900 dark:text-gray-100 transition-colors duration-200">
-    
-    <!-- Navigation -->
-    <nav class="sticky top-0 z-50 bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border backdrop-blur-sm bg-opacity-90 dark:bg-opacity-90">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-8">
-                    <div>
-                        <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">MFLIXPH</h1>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 -mt-1">Admin Dashboard</p>
-                    </div>
-                </div>
-                
-                <div class="flex items-center space-x-4">
-                    <!-- Theme Toggle -->
-                    <button onclick="toggleTheme()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover transition-colors">
-                        <svg id="themeIcon" class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path class="sun" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                            <path class="moon hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-                        </svg>
-                    </button>
-                    
-                    <div class="flex items-center space-x-3 pl-4 border-l border-gray-200 dark:border-dark-border">
-                        <div class="w-9 h-9 rounded-full gradient-primary flex items-center justify-center text-white font-semibold">A</div>
-                        <span class="text-sm font-medium hidden sm:block">Admin</span>
-                    </div>
-                </div>
+<body>
+    <!-- Main Container -->
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar w-64 p-6 flex flex-col">
+            <div class="mb-8">
+                <h1 class="text-2xl font-bold">MFlix</h1>
+                <p class="text-sm text-gray-500 mt-1">Admin Panel</p>
+            </div>
+            
+            <nav class="flex-1 space-y-1">
+                <a href="#" onclick="loadDashboard()" class="sidebar-item active flex items-center px-4 py-3 rounded-lg" id="nav-dashboard">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i>
+                    <span class="font-medium">Dashboard</span>
+                </a>
+                <a href="#" onclick="loadSearch()" class="sidebar-item flex items-center px-4 py-3 rounded-lg text-gray-400" id="nav-search">
+                    <i data-lucide="search" class="w-5 h-5 mr-3"></i>
+                    <span class="font-medium">Search Content</span>
+                </a>
+                <a href="#" onclick="loadContent('all')" class="sidebar-item flex items-center px-4 py-3 rounded-lg text-gray-400" id="nav-all">
+                    <i data-lucide="film" class="w-5 h-5 mr-3"></i>
+                    <span class="font-medium">All Content</span>
+                </a>
+                <a href="#" onclick="loadContent('POPULAR')" class="sidebar-item flex items-center px-4 py-3 rounded-lg text-gray-400" id="nav-popular">
+                    <i data-lucide="trending-up" class="w-5 h-5 mr-3"></i>
+                    <span class="font-medium">Popular</span>
+                </a>
+                <a href="#" onclick="loadContent('TOP_RATED')" class="sidebar-item flex items-center px-4 py-3 rounded-lg text-gray-400" id="nav-toprated">
+                    <i data-lucide="star" class="w-5 h-5 mr-3"></i>
+                    <span class="font-medium">Top Rated</span>
+                </a>
+                <a href="#" onclick="loadContent('UPCOMING')" class="sidebar-item flex items-center px-4 py-3 rounded-lg text-gray-400" id="nav-upcoming">
+                    <i data-lucide="clock" class="w-5 h-5 mr-3"></i>
+                    <span class="font-medium">Upcoming</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center px-4 py-3 rounded-lg text-gray-400">
+                    <i data-lucide="server" class="w-5 h-5 mr-3"></i>
+                    <span class="font-medium">Servers</span>
+                </a>
+            </nav>
+            
+            <div class="pt-6 border-t divider">
+                <a href="#" class="sidebar-item flex items-center px-4 py-3 rounded-lg text-gray-400">
+                    <i data-lucide="settings" class="w-5 h-5 mr-3"></i>
+                    <span class="font-medium">Settings</span>
+                </a>
             </div>
         </div>
-    </nav>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        <!-- Search & Add Section -->
-        <div class="bg-white dark:bg-dark-card rounded-2xl shadow-lg border border-gray-200 dark:border-dark-border p-6 mb-8">
-            <h2 class="text-xl font-bold mb-6 flex items-center">
-                <svg class="w-6 h-6 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                </svg>
-                Add New Content
-            </h2>
-            
-            <div class="space-y-4">
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <input type="text" id="searchQuery" placeholder="Search anime, movies, dramas..." 
-                        class="flex-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent outline-none transition-all">
-                    <select id="contentType" class="px-4 py-3 rounded-xl bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border focus:ring-2 focus:ring-purple-500 outline-none transition-all">
-                        <option value="ANIME">Anime</option>
-                        <option value="MANGA">Manga</option>
-                    </select>
-                    <button onclick="searchAniList()" class="px-8 py-3 gradient-primary text-white rounded-xl hover:opacity-90 font-medium transition-all shadow-lg shadow-purple-500/30 flex items-center justify-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                        Search
-                    </button>
-                </div>
-            </div>
-
-            <!-- Search Results -->
-            <div id="searchResults" class="hidden mt-6">
-                <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-4 uppercase tracking-wide">Search Results</h3>
-                <div id="resultsList" class="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto scrollbar-hide"></div>
-            </div>
-        </div>
-
-        <!-- Selected Content Form -->
-        <div id="contentForm" class="bg-white dark:bg-dark-card rounded-2xl shadow-lg border border-gray-200 dark:border-dark-border p-6 mb-8 hidden">
-            <h2 class="text-xl font-bold mb-6">Content Details</h2>
-            
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-1">
-                    <img id="coverImage" src="" alt="Cover" class="w-full rounded-xl shadow-md">
-                </div>
-                
-                <div class="lg:col-span-2 space-y-4">
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto">
+            <!-- Header -->
+            <header class="border-b divider px-8 py-6">
+                <div class="flex items-center justify-between">
                     <div>
-                        <label class="block text-sm font-medium mb-2">Title</label>
-                        <input type="text" id="contentTitle" readonly class="w-full px-4 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl">
+                        <h2 class="text-2xl font-bold" id="page-title">Dashboard</h2>
+                        <p class="text-gray-500 text-sm mt-1" id="page-subtitle">Manage your streaming content</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button class="btn-secondary px-4 py-2 rounded-lg flex items-center">
+                            <i data-lucide="bell" class="w-5 h-5"></i>
+                        </button>
+                        <button onclick="showImportModal()" class="btn-primary px-6 py-2 rounded-lg font-medium flex items-center">
+                            <i data-lucide="plus" class="w-5 h-5 mr-2"></i>
+                            Add Content
+                        </button>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Main Content Area -->
+            <div class="p-8" id="main-content">
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="stat-card p-6 rounded-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
+                                <i data-lucide="film" class="w-6 h-6 text-black"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-3xl font-bold mb-1" id="stat-total">-</h3>
+                        <p class="text-gray-500 text-sm">Total Content</p>
                     </div>
                     
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="stat-card p-6 rounded-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
+                                <i data-lucide="trending-up" class="w-6 h-6 text-black"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-3xl font-bold mb-1" id="stat-popular">-</h3>
+                        <p class="text-gray-500 text-sm">Popular</p>
+                    </div>
+                    
+                    <div class="stat-card p-6 rounded-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
+                                <i data-lucide="star" class="w-6 h-6 text-black"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-3xl font-bold mb-1" id="stat-toprated">-</h3>
+                        <p class="text-gray-500 text-sm">Top Rated</p>
+                    </div>
+                    
+                    <div class="stat-card p-6 rounded-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
+                                <i data-lucide="clock" class="w-6 h-6 text-black"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-3xl font-bold mb-1" id="stat-upcoming">-</h3>
+                        <p class="text-gray-500 text-sm">Upcoming</p>
+                    </div>
+                </div>
+                
+                <!-- Search Section -->
+                <div class="card p-6 rounded-xl mb-8" id="search-section">
+                    <h3 class="text-xl font-bold mb-4">Search AniList</h3>
+                    <div class="flex space-x-4">
+                        <div class="flex-1">
+                            <input type="text" id="search-query" placeholder="Search anime, movies, kdrama..." class="input-field w-full px-4 py-3 rounded-lg" onkeypress="if(event.key === 'Enter') searchAniList()">
+                        </div>
+                        <select id="search-type" class="input-field px-4 py-3 rounded-lg">
+                            <option value="ANIME">ANIME</option>
+                            <option value="MANGA">MOVIE</option>
+                        </select>
+                        <button onclick="searchAniList()" class="btn-primary px-8 py-3 rounded-lg font-medium flex items-center">
+                            <i data-lucide="search" class="w-5 h-5 mr-2"></i>
+                            Search
+                        </button>
+                    </div>
+                    <div id="search-results" class="mt-6"></div>
+                </div>
+                
+                <!-- Recent Content Table -->
+                <div class="card rounded-xl overflow-hidden">
+                    <div class="p-6 border-b divider">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xl font-bold">Recent Content</h3>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="text-left text-gray-500 text-sm border-b divider">
+                                    <th class="px-6 py-4 font-medium">Title</th>
+                                    <th class="px-6 py-4 font-medium">Type</th>
+                                    <th class="px-6 py-4 font-medium">Category</th>
+                                    <th class="px-6 py-4 font-medium">Episodes</th>
+                                    <th class="px-6 py-4 font-medium">Score</th>
+                                    <th class="px-6 py-4 font-medium">Servers</th>
+                                    <th class="px-6 py-4 font-medium">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="content-table">
+                                <tr>
+                                    <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                                        <div class="loading mx-auto mb-4"></div>
+                                        <p>Loading content...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="px-6 py-4 border-t divider flex items-center justify-between">
+                        <p class="text-sm text-gray-500" id="pagination-info">-</p>
+                        <div class="flex space-x-2">
+                            <button onclick="previousPage()" class="btn-secondary px-4 py-2 rounded-lg">Previous</button>
+                            <button onclick="nextPage()" class="btn-primary px-4 py-2 rounded-lg">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal fixed inset-0 hidden items-center justify-center" style="display: none;">
+        <div class="modal-content max-w-2xl w-full mx-4 p-6 rounded-xl">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold">Import from AniList</h3>
+                <button onclick="closeImportModal()" class="p-2 hover:bg-gray-800 rounded">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">AniList ID</label>
+                    <input type="number" id="import-id" placeholder="Enter AniList ID" class="input-field w-full px-4 py-3 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Category</label>
+                    <select id="import-category" class="input-field w-full px-4 py-3 rounded-lg">
+                        <option value="NEWEST">NEWEST</option>
+                        <option value="POPULAR">POPULAR</option>
+                        <option value="TOP_RATED">TOP RATED</option>
+                        <option value="UPCOMING">UPCOMING</option>
+                    </select>
+                </div>
+                <div class="flex space-x-4 pt-4">
+                    <button onclick="importContent()" class="btn-primary flex-1 px-6 py-3 rounded-lg font-medium">Import</button>
+                    <button onclick="closeImportModal()" class="btn-secondary flex-1 px-6 py-3 rounded-lg font-medium">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Server Management Modal -->
+    <div id="server-modal" class="modal fixed inset-0 hidden items-center justify-center" style="display: none;">
+        <div class="modal-content max-w-4xl w-full mx-4 p-6 rounded-xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-xl font-bold" id="server-modal-title">Manage Servers</h3>
+                    <p class="text-sm text-gray-500 mt-1" id="server-modal-subtitle"></p>
+                </div>
+                <button onclick="closeServerModal()" class="p-2 hover:bg-gray-800 rounded">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Add Single Server -->
+                <div class="card p-4 rounded-lg">
+                    <h4 class="font-bold mb-4">Add Server Link</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
-                            <label class="block text-sm font-medium mb-2">Type</label>
-                            <select id="contentTypeSelect" class="w-full px-4 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
-                                <option value="ANIME">Anime</option>
-                                <option value="MOVIE">Movie</option>
-                                <option value="KDRAMA">K-Drama</option>
-                                <option value="CDRAMA">C-Drama</option>
-                                <option value="JDRAMA">J-Drama</option>
-                                <option value="SERIES">Series</option>
+                            <label class="block text-sm font-medium mb-2">Server</label>
+                            <select id="server-name" class="input-field w-full px-4 py-3 rounded-lg">
+                                <option value="server1">Server 1</option>
+                                <option value="server2">Server 2</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium mb-2">Episodes</label>
-                            <input type="number" id="contentEpisodes" readonly class="w-full px-4 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl">
+                            <label class="block text-sm font-medium mb-2">Episode</label>
+                            <input type="number" id="server-episode" min="1" value="1" class="input-field w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium mb-2">URL</label>
+                            <input type="url" id="server-url" placeholder="https://..." class="input-field w-full px-4 py-3 rounded-lg">
                         </div>
                     </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Description</label>
-                        <textarea id="contentDescription" rows="4" readonly class="w-full px-4 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl resize-none"></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Genres</label>
-                        <div id="genresList" class="flex flex-wrap gap-2"></div>
-                    </div>
-
-                    <input type="hidden" id="anilistId">
-                    
-                    <button onclick="addToDatabase()" class="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:opacity-90 font-semibold transition-all shadow-lg shadow-green-500/30">
-                        Add to Database
+                    <button onclick="addServer()" class="btn-primary w-full mt-4 px-6 py-3 rounded-lg font-medium">
+                        Add Server
                     </button>
                 </div>
-            </div>
-        </div>
 
-        <!-- Content Management -->
-        <div class="bg-white dark:bg-dark-card rounded-2xl shadow-lg border border-gray-200 dark:border-dark-border overflow-hidden">
-            <!-- Tabs -->
-            <div class="border-b border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg/50">
-                <nav class="flex space-x-1 px-6" aria-label="Tabs">
-                    <button onclick="switchTab('all')" class="tab-btn tab-active px-6 py-4 text-sm font-semibold transition-all">
-                        All Content
+                <!-- Bulk Upload -->
+                <div class="card p-4 rounded-lg">
+                    <h4 class="font-bold mb-4">Bulk Upload (JSON Format)</h4>
+                    <textarea id="bulk-servers" rows="8" placeholder='[
+  {"serverName": "server1", "url": "https://...", "episode": 1},
+  {"serverName": "server2", "url": "https://...", "episode": 1}
+]' class="input-field w-full px-4 py-3 rounded-lg font-mono text-sm"></textarea>
+                    <button onclick="bulkAddServers()" class="btn-primary w-full mt-4 px-6 py-3 rounded-lg font-medium">
+                        Bulk Upload
                     </button>
-                    <button onclick="switchTab('newest')" class="tab-btn px-6 py-4 text-sm font-semibold transition-all">
-                        Newest
-                    </button>
-                    <button onclick="switchTab('popular')" class="tab-btn px-6 py-4 text-sm font-semibold transition-all">
-                        Popular
-                    </button>
-                    <button onclick="switchTab('toprated')" class="tab-btn px-6 py-4 text-sm font-semibold transition-all">
-                        Top Rated
-                    </button>
-                </nav>
-            </div>
+                </div>
 
-            <!-- Content List -->
-            <div class="p-6">
-                <div id="contentList" class="space-y-4"></div>
-                <div id="loadingSpinner" class="text-center py-12 hidden">
-                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>
+                <!-- Current Servers List -->
+                <div class="card p-4 rounded-lg">
+                    <h4 class="font-bold mb-4">Current Servers</h4>
+                    <div id="current-servers" class="space-y-2">
+                        <p class="text-center text-gray-500 py-4">Loading...</p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Upload Modal -->
-    <div id="uploadModal" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div class="bg-white dark:bg-dark-card rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-dark-border">
-            <div class="sticky top-0 bg-white dark:bg-dark-card p-6 border-b border-gray-200 dark:border-dark-border z-10">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-bold">Upload Episode Links</h3>
-                    <button onclick="closeUploadModal()" class="p-2 hover:bg-gray-100 dark:hover:bg-dark-hover rounded-lg transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
+    <!-- Update Category Modal -->
+    <div id="category-modal" class="modal fixed inset-0 hidden items-center justify-center" style="display: none;">
+        <div class="modal-content max-w-md w-full mx-4 p-6 rounded-xl">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold">Update Category</h3>
+                <button onclick="closeCategoryModal()" class="p-2 hover:bg-gray-800 rounded">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
             </div>
-            
-            <div class="p-6">
-                <input type="hidden" id="modalContentId">
-                <div class="mb-6">
-                    <h4 id="modalContentTitle" class="font-bold text-lg"></h4>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Select Category</label>
+                    <select id="update-category" class="input-field w-full px-4 py-3 rounded-lg">
+                        <option value="NEWEST">NEWEST</option>
+                        <option value="POPULAR">POPULAR</option>
+                        <option value="TOP_RATED">TOP RATED</option>
+                        <option value="UPCOMING">UPCOMING</option>
+                    </select>
                 </div>
-
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Server</label>
-                        <select id="serverSelect" class="w-full px-4 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
-                            <option value="server1">Server 1</option>
-                            <option value="server2">Server 2</option>
-                        </select>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Episode Number</label>
-                            <input type="number" id="episodeNumber" min="1" placeholder="1" class="w-full px-4 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Episode Title</label>
-                            <input type="text" id="episodeTitle" placeholder="Episode 1" class="w-full px-4 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Video URL</label>
-                        <input type="url" id="videoUrl" placeholder="https://yourserver.com/video.mp4" class="w-full px-4 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
-                    </div>
-
-                    <button onclick="uploadEpisodeLink()" class="w-full px-6 py-4 gradient-primary text-white rounded-xl hover:opacity-90 font-semibold shadow-lg shadow-purple-500/30 transition-all">
-                        Upload Link
-                    </button>
-                </div>
-
-                <div class="mt-8">
-                    <h4 class="font-semibold mb-4 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                        </svg>
-                        Existing Episodes
-                    </h4>
-                    <div id="existingEpisodes" class="space-y-2 max-h-60 overflow-y-auto scrollbar-hide"></div>
+                <div class="flex space-x-4 pt-4">
+                    <button onclick="saveCategory()" class="btn-primary flex-1 px-6 py-3 rounded-lg font-medium">Update</button>
+                    <button onclick="closeCategoryModal()" class="btn-secondary flex-1 px-6 py-3 rounded-lg font-medium">Cancel</button>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Category Modal -->
-    <div id="categoryModal" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div class="bg-white dark:bg-dark-card rounded-2xl shadow-2xl max-w-md w-full border border-gray-200 dark:border-dark-border">
-            <div class="p-6 border-b border-gray-200 dark:border-dark-border">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-bold">Change Category</h3>
-                    <button onclick="closeCategoryModal()" class="p-2 hover:bg-gray-100 dark:hover:bg-dark-hover rounded-lg transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="p-6">
-                <input type="hidden" id="categoryContentId">
-                <div class="space-y-3">
-                    <button onclick="updateCategory('newest')" class="w-full px-4 py-3 text-left rounded-xl bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-medium transition-all">
-                        Newest
-                    </button>
-                    <button onclick="updateCategory('popular')" class="w-full px-4 py-3 text-left rounded-xl bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 font-medium transition-all">
-                        Popular
-                    </button>
-                    <button onclick="updateCategory('toprated')" class="w-full px-4 py-3 text-left rounded-xl bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/40 border border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300 font-medium transition-all">
-                        Top Rated
-                    </button>
-                    <button onclick="updateCategory('none')" class="w-full px-4 py-3 text-left rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 font-medium transition-all">
-                        None
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    
     <script>
-        const API_URL = 'http://localhost:5000/api/admin';
-        let currentTab = 'all';
+        const API_URL = 'http://localhost:3000/api';
+        let currentPage = 1;
+        let currentCategory = null;
+        let currentContentId = null;
+        let currentContentTitle = null;
+        let updateCategoryId = null;
 
-        // Theme Toggle
-        function toggleTheme() {
-            const html = document.documentElement;
-            const isDark = html.classList.contains('dark');
-            
-            if (isDark) {
-                html.classList.remove('dark');
-                html.classList.add('light');
-                localStorage.setItem('theme', 'light');
-                document.querySelector('.sun').classList.add('hidden');
-                document.querySelector('.moon').classList.remove('hidden');
-            } else {
-                html.classList.remove('light');
-                html.classList.add('dark');
-                localStorage.setItem('theme', 'dark');
-                document.querySelector('.sun').classList.remove('hidden');
-                document.querySelector('.moon').classList.add('hidden');
-            }
-        }
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadContent();
+            lucide.createIcons();
+        });
 
-        // Load saved theme
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        if (savedTheme === 'light') {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.classList.add('light');
-            document.querySelector('.sun').classList.add('hidden');
-            document.querySelector('.moon').classList.remove('hidden');
-        }
-
-        // Search AniList
-        async function searchAniList() {
-            const query = document.getElementById('searchQuery').value;
-            const type = document.getElementById('contentType').value;
-            
-            if (!query) return alert('Please enter a search query');
-
+        // Load statistics
+        async function loadStats() {
             try {
-                const response = await fetch(`${API_URL}/search/anilist?query=${query}&type=${type}`);
+                const response = await fetch(`${API_URL}/stats`);
                 const data = await response.json();
                 
-                displaySearchResults(data.data);
-            } catch (error) {
-                alert('Error searching AniList: ' + error.message);
-            }
-        }
-
-        // Display Search Results
-        function displaySearchResults(results) {
-            const resultsDiv = document.getElementById('searchResults');
-            const listDiv = document.getElementById('resultsList');
-            
-            if (results.length === 0) {
-                listDiv.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8">No results found</p>';
-                resultsDiv.classList.remove('hidden');
-                return;
-            }
-
-            listDiv.innerHTML = results.map(item => `
-                <div class="flex items-start space-x-4 p-4 border border-gray-200 dark:border-dark-border rounded-xl hover:bg-gray-50 dark:hover:bg-dark-hover cursor-pointer transition-all card-hover" onclick='selectContent(${JSON.stringify(item).replace(/'/g, "&apos;")})'>
-                    <img src="${item.coverImage.large}" alt="${item.title.romaji}" class="w-16 h-24 object-cover rounded-lg shadow-md">
-                    <div class="flex-1 min-w-0">
-                        <h4 class="font-semibold truncate">${item.title.english || item.title.romaji}</h4>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 truncate">${item.genres.join(', ')}</p>
-                        <div class="flex items-center space-x-3 mt-2 text-xs text-gray-400">
-                            <span>📺 ${item.episodes || 'N/A'} eps</span>
-                            <span>📅 ${item.seasonYear || 'N/A'}</span>
-                            <span>⭐ ${item.averageScore || 'N/A'}</span>
-                        </div>
-                    </div>
-                    <button class="px-4 py-2 gradient-primary text-white text-sm rounded-lg hover:opacity-90 transition-all font-medium shrink-0">
-                        Select
-                    </button>
-                </div>
-            `).join('');
-            
-            resultsDiv.classList.remove('hidden');
-        }
-
-        // Select Content
-        function selectContent(item) {
-            const formDiv = document.getElementById('contentForm');
-            
-            document.getElementById('coverImage').src = item.coverImage.extraLarge || item.coverImage.large;
-            document.getElementById('contentTitle').value = item.title.english || item.title.romaji;
-            document.getElementById('contentEpisodes').value = item.episodes || '';
-            document.getElementById('contentDescription').value = (item.description || '').replace(/<[^>]*>/g, '');
-            document.getElementById('anilistId').value = item.id;
-            
-            const genresDiv = document.getElementById('genresList');
-            genresDiv.innerHTML = item.genres.map(genre => 
-                `<span class="px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium">${genre}</span>`
-            ).join('');
-            
-            formDiv.classList.remove('hidden');
-            formDiv.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        // Add to Database
-        async function addToDatabase() {
-            const data = {
-                anilistId: parseInt(document.getElementById('anilistId').value),
-                title: document.getElementById('contentTitle').value,
-                type: document.getElementById('contentTypeSelect').value
-            };
-
-            try {
-                const response = await fetch(`${API_URL}/content`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    alert('✅ Content added successfully!');
-                    document.getElementById('contentForm').classList.add('hidden');
-                    document.getElementById('searchResults').classList.add('hidden');
-                    document.getElementById('searchQuery').value = '';
-                    loadContent();
+                if (data.success) {
+                    document.getElementById('stat-total').textContent = data.stats.total;
+                    document.getElementById('stat-popular').textContent = data.stats.byCategory.popular;
+                    document.getElementById('stat-toprated').textContent = data.stats.byCategory.topRated;
+                    document.getElementById('stat-upcoming').textContent = data.stats.byCategory.upcoming;
                 }
             } catch (error) {
-                alert('❌ Error adding content: ' + error.message);
+                console.error('Error loading stats:', error);
             }
         }
 
-        // Load Content
-        async function loadContent() {
-            const listDiv = document.getElementById('contentList');
-            const spinner = document.getElementById('loadingSpinner');
+        // Load content
+        async function loadContent(category = null, page = 1) {
+            currentCategory = category;
+            currentPage = page;
             
-            spinner.classList.remove('hidden');
-            listDiv.innerHTML = '';
+            const tableBody = document.getElementById('content-table');
+            tableBody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500"><div class="loading mx-auto mb-4"></div><p>Loading content...</p></td></tr>';
             
             try {
-                let url = `${API_URL}/content?limit=50`;
-                if (currentTab !== 'all') url += `&category=${currentTab}`;
+                let url = `${API_URL}/content?page=${page}&limit=20`;
+                if (category && category !== 'all') {
+                    url += `&category=${category}`;
+                }
                 
                 const response = await fetch(url);
                 const data = await response.json();
                 
-                displayContent(data.data);
-            } catch (error) {
-                listDiv.innerHTML = '<p class="text-red-500 text-center py-8">Error loading content</p>';
-            } finally {
-                spinner.classList.add('hidden');
-            }
-        }
-
-        // Display Content
-        function displayContent(content) {
-            const listDiv = document.getElementById('contentList');
-            
-            if (content.length === 0) {
-                listDiv.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-12">No content found</p>';
-                return;
-            }
-
-            listDiv.innerHTML = content.map(item => `
-                <div class="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-4 p-4 border border-gray-200 dark:border-dark-border rounded-xl hover:shadow-xl dark:hover:bg-dark-hover card-hover transition-all">
-                    <img src="${item.coverImage || 'https://via.placeholder.com/100x150'}" alt="${item.title}" class="w-24 h-36 object-cover rounded-lg shadow-md">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-start justify-between mb-2">
-                            <h4 class="font-bold text-lg">${item.title}</h4>
-                            ${item.category !== 'none' ? `<span class="px-2 py-1 text-xs rounded-full font-medium ${
-                                item.category === 'newest' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
-                                item.category === 'popular' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
-                                'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
-                            }">${item.category.toUpperCase()}</span>` : ''}
-                        </div>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">${item.type} • ${item.episodes || 0} episodes</p>
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
-                            <span class="flex items-center">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                                </svg>
-                                ${item.likes}
-                            </span>
-                            <span class="flex items-center">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                                </svg>
-                                ${item.averageScore || 0}
-                            </span>
-                        </div>
-                        <div class="mt-4 flex flex-wrap gap-2">
-                            <button onclick="openUploadModal('${item._id}', '${item.title}', ${JSON.stringify(item.servers || []).replace(/"/g, '&quot;')})" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg font-medium transition-all shadow-md">
-                                📤 Upload Links
-                            </button>
-                            <button onclick="openCategoryModal('${item._id}')" class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded-lg font-medium transition-all shadow-md">
-                                🏷️ Category
-                            </button>
-                            <button onclick="toggleBanner('${item._id}', ${item.showInBanner})" class="px-4 py-2 ${item.showInBanner ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-500 hover:bg-gray-600'} text-white text-sm rounded-lg font-medium transition-all shadow-md">
-                                ${item.showInBanner ? '🎬 In Banner' : '➕ Add to Banner'}
-                            </button>
-                            <button onclick="deleteContent('${item._id}')" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg font-medium transition-all shadow-md">
-                                🗑️ Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Open Upload Modal
-        function openUploadModal(contentId, title, servers) {
-            document.getElementById('modalContentId').value = contentId;
-            document.getElementById('modalContentTitle').textContent = title;
-            document.getElementById('uploadModal').classList.remove('hidden');
-            displayExistingEpisodes(servers);
-        }
-
-        function closeUploadModal() {
-            document.getElementById('uploadModal').classList.add('hidden');
-            document.getElementById('episodeNumber').value = '';
-            document.getElementById('episodeTitle').value = '';
-            document.getElementById('videoUrl').value = '';
-        }
-
-        // Display Existing Episodes
-        function displayExistingEpisodes(servers) {
-            const div = document.getElementById('existingEpisodes');
-            
-            if (!servers || servers.length === 0) {
-                div.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">No episodes uploaded yet</p>';
-                return;
-            }
-
-            const episodes = servers.flatMap(server => 
-                server.episodes.map(ep => ({ ...ep, serverName: server.serverName }))
-            ).sort((a, b) => a.episodeNumber - b.episodeNumber);
-
-            div.innerHTML = episodes.map(ep => `
-                <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-dark-bg rounded-lg border border-gray-200 dark:border-dark-border">
-                    <div>
-                        <span class="font-semibold text-sm">${ep.serverName.toUpperCase()} - EP ${ep.episodeNumber}</span>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${ep.title || 'No title'}</p>
-                    </div>
-                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                </div>
-            `).join('');
-        }
-
-        // Upload Episode Link
-        async function uploadEpisodeLink() {
-            const contentId = document.getElementById('modalContentId').value;
-            const serverName = document.getElementById('serverSelect').value;
-            const episodeNumber = parseInt(document.getElementById('episodeNumber').value);
-            const episodeTitle = document.getElementById('episodeTitle').value;
-            const url = document.getElementById('videoUrl').value;
-
-            if (!episodeNumber || !url) {
-                return alert('⚠️ Please fill episode number and video URL');
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/content/${contentId}/servers`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ serverName, episodeNumber, episodeTitle, url })
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    alert('✅ Episode link uploaded successfully!');
-                    displayExistingEpisodes(result.data.servers);
-                    document.getElementById('episodeNumber').value = '';
-                    document.getElementById('episodeTitle').value = '';
-                    document.getElementById('videoUrl').value = '';
+                if (data.success && data.content.length > 0) {
+                    displayContent(data.content);
+                    document.getElementById('pagination-info').textContent = 
+                        `Showing ${((page - 1) * 20) + 1} to ${Math.min(page * 20, data.totalItems)} of ${data.totalItems} entries`;
+                } else {
+                    tableBody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">No content found</td></tr>';
                 }
             } catch (error) {
-                alert('❌ Error uploading link: ' + error.message);
+                console.error('Error loading content:', error);
+                tableBody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-red-500">Error loading content</td></tr>';
             }
         }
 
-        // Category Modal
-        function openCategoryModal(contentId) {
-            document.getElementById('categoryContentId').value = contentId;
-            document.getElementById('categoryModal').classList.remove('hidden');
+        // Display content in table
+        function displayContent(items) {
+            const tableBody = document.getElementById('content-table');
+            tableBody.innerHTML = items.map(item => `
+                <tr class="table-row">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <img src="${item.coverImage || ''}" class="w-12 h-16 bg-gray-800 rounded mr-4 object-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27100%27 height=%27100%27%3E%3Crect fill=%27%23333%27 width=%27100%27 height=%27100%27/%3E%3C/svg%3E'">
+                            <div>
+                                <div class="font-medium">${item.title?.english || item.title?.romaji || 'N/A'}</div>
+                                <div class="text-sm text-gray-500">${item.title?.native || ''}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="badge badge-black">${item.type}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="badge badge-white">${item.category}</span>
+                    </td>
+                    <td class="px-6 py-4 text-gray-400">${item.episodes || 'N/A'}</td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <i data-lucide="star" class="w-4 h-4 mr-1 fill-current"></i>
+                            <span>${item.averageScore ? (item.averageScore / 10).toFixed(1) : 'N/A'}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex space-x-1">
+                            ${item.servers?.filter(s => s.name === 'server1').length > 0 ? '<span class="w-2 h-2 bg-green-500 rounded-full"></span>' : '<span class="w-2 h-2 bg-gray-600 rounded-full"></span>'}
+                            ${item.servers?.filter(s => s.name === 'server2').length > 0 ? '<span class="w-2 h-2 bg-green-500 rounded-full"></span>' : '<span class="w-2 h-2 bg-gray-600 rounded-full"></span>'}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex space-x-2">
+                            <button onclick="editContent('${item._id}')" class="p-2 hover:bg-gray-800 rounded" title="Manage Servers">
+                                <i data-lucide="server" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="updateCategory('${item._id}', '${item.category}')" class="p-2 hover:bg-gray-800 rounded" title="Update Category">
+                                <i data-lucide="edit" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteContent('${item._id}')" class="p-2 hover:bg-gray-800 rounded" title="Delete">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            lucide.createIcons();
+        }
+
+        // Search AniList
+        async function searchAniList() {
+            const query = document.getElementById('search-query').value;
+            const type = document.getElementById('search-type').value;
+            const resultsDiv = document.getElementById('search-results');
+            
+            if (!query) return;
+            
+            resultsDiv.innerHTML = '<div class="text-center py-4"><div class="loading mx-auto mb-4"></div><p class="text-gray-500">Searching...</p></div>';
+            
+            try {
+                const response = await fetch(`${API_URL}/search?query=${encodeURIComponent(query)}&type=${type}`);
+                const data = await response.json();
+                
+                if (data.success && data.results.length > 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${data.results.map(item => `
+                                <div class="card p-4 rounded-lg">
+                                    <img src="${item.coverImage?.large || ''}" class="w-full h-48 object-cover rounded mb-3" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27100%27 height=%27100%27%3E%3Crect fill=%27%23333%27 width=%27100%27 height=%27100%27/%3E%3C/svg%3E'">
+                                    <h4 class="font-bold mb-1">${item.title?.english || item.title?.romaji}</h4>
+                                    <p class="text-sm text-gray-500 mb-3">${item.genres?.slice(0, 3).join(', ') || ''}</p>
+                                    <button onclick="quickImport(${item.id}, '${(item.title?.english || item.title?.romaji).replace(/'/g, "\\'")}')" class="btn-primary w-full py-2 rounded-lg text-sm">
+                                        Import
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    lucide.createIcons();
+                } else {
+                    resultsDiv.innerHTML = '<p class="text-center text-gray-500 py-4">No results found</p>';
+                }
+            } catch (error) {
+                console.error('Error searching:', error);
+                resultsDiv.innerHTML = '<p class="text-center text-red-500 py-4">Error searching AniList</p>';
+            }
+        }
+
+        // Quick import from search
+        async function quickImport(anilistId, title) {
+            if (!confirm(`Import "${title}"?`)) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/import`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ anilistId, category: 'NEWEST' })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Content imported successfully!');
+                    loadContent(currentCategory, currentPage);
+                    loadStats();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error importing:', error);
+                alert('Error importing content');
+            }
+        }
+
+        // Modal functions
+        function showImportModal() {
+            document.getElementById('import-modal').style.display = 'flex';
+            lucide.createIcons();
+        }
+
+        function closeImportModal() {
+            document.getElementById('import-modal').style.display = 'none';
+        }
+
+        async function importContent() {
+            const anilistId = document.getElementById('import-id').value;
+            const category = document.getElementById('import-category').value;
+            
+            if (!anilistId) {
+                alert('Please enter an AniList ID');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/import`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ anilistId: parseInt(anilistId), category })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Content imported successfully!');
+                    closeImportModal();
+                    loadContent(currentCategory, currentPage);
+                    loadStats();
+                    document.getElementById('import-id').value = '';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error importing:', error);
+                alert('Error importing content');
+            }
+        }
+
+        // Delete content
+        async function deleteContent(id) {
+            if (!confirm('Are you sure you want to delete this content?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/content/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Content deleted successfully!');
+                    loadContent(currentCategory, currentPage);
+                    loadStats();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error deleting:', error);
+                alert('Error deleting content');
+            }
+        }
+
+        // Edit content - Open server management
+        async function editContent(id) {
+            currentContentId = id;
+            
+            try {
+                const response = await fetch(`${API_URL}/content/${id}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentContentTitle = data.content.title.english || data.content.title.romaji;
+                    document.getElementById('server-modal-title').textContent = 'Manage Servers';
+                    document.getElementById('server-modal-subtitle').textContent = currentContentTitle;
+                    document.getElementById('server-modal').style.display = 'flex';
+                    
+                    loadCurrentServers();
+                    lucide.createIcons();
+                }
+            } catch (error) {
+                console.error('Error loading content:', error);
+                alert('Error loading content details');
+            }
+        }
+
+        function closeServerModal() {
+            document.getElementById('server-modal').style.display = 'none';
+            currentContentId = null;
+        }
+
+        // Load current servers
+        async function loadCurrentServers() {
+            const container = document.getElementById('current-servers');
+            container.innerHTML = '<p class="text-center text-gray-500 py-4">Loading...</p>';
+            
+            try {
+                const response = await fetch(`${API_URL}/content/${currentContentId}`);
+                const data = await response.json();
+                
+                if (data.success && data.content.servers.length > 0) {
+                    // Group by episode
+                    const byEpisode = {};
+                    data.content.servers.forEach(s => {
+                        if (!byEpisode[s.episode]) byEpisode[s.episode] = [];
+                        byEpisode[s.episode].push(s);
+                    });
+                    
+                    container.innerHTML = Object.keys(byEpisode).sort((a, b) => a - b).map(ep => `
+                        <div class="bg-black border border-gray-800 rounded-lg p-3">
+                            <div class="font-bold mb-2">Episode ${ep}</div>
+                            <div class="space-y-2">
+                                ${byEpisode[ep].map(s => `
+                                    <div class="flex items-center justify-between bg-gray-900 p-2 rounded">
+                                        <div class="flex-1">
+                                            <span class="badge badge-white text-xs mr-2">${s.name}</span>
+                                            <span class="text-xs text-gray-400">${s.url.substring(0, 50)}...</span>
+                                        </div>
+                                        <button onclick="removeServer('${s._id}')" class="p-1 hover:bg-gray-800 rounded">
+                                            <i data-lucide="trash-2" class="w-4 h-4 text-red-500"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('');
+                    lucide.createIcons();
+                } else {
+                    container.innerHTML = '<p class="text-center text-gray-500 py-4">No servers added yet</p>';
+                }
+            } catch (error) {
+                console.error('Error loading servers:', error);
+                container.innerHTML = '<p class="text-center text-red-500 py-4">Error loading servers</p>';
+            }
+        }
+
+        // Add single server
+        async function addServer() {
+            const serverName = document.getElementById('server-name').value;
+            const episode = parseInt(document.getElementById('server-episode').value);
+            const url = document.getElementById('server-url').value;
+            
+            if (!url) {
+                alert('Please enter a URL');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/content/${currentContentId}/servers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ serverName, url, episode })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Server added successfully!');
+                    document.getElementById('server-url').value = '';
+                    loadCurrentServers();
+                    loadContent(currentCategory, currentPage);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error adding server:', error);
+                alert('Error adding server');
+            }
+        }
+
+        // Bulk add servers
+        async function bulkAddServers() {
+            const jsonText = document.getElementById('bulk-servers').value;
+            
+            if (!jsonText.trim()) {
+                alert('Please enter JSON data');
+                return;
+            }
+            
+            try {
+                const servers = JSON.parse(jsonText);
+                
+                if (!Array.isArray(servers)) {
+                    alert('JSON must be an array');
+                    return;
+                }
+                
+                const response = await fetch(`${API_URL}/content/${currentContentId}/servers/bulk`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ servers })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Servers added successfully!');
+                    document.getElementById('bulk-servers').value = '';
+                    loadCurrentServers();
+                    loadContent(currentCategory, currentPage);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Invalid JSON format or error uploading');
+            }
+        }
+
+        // Remove server
+        async function removeServer(serverId) {
+            if (!confirm('Remove this server?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/content/${currentContentId}/servers/${serverId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    loadCurrentServers();
+                    loadContent(currentCategory, currentPage);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error removing server:', error);
+                alert('Error removing server');
+            }
+        }
+
+        // Update category modal
+        function updateCategory(id, currentCat) {
+            updateCategoryId = id;
+            document.getElementById('update-category').value = currentCat;
+            document.getElementById('category-modal').style.display = 'flex';
+            lucide.createIcons();
         }
 
         function closeCategoryModal() {
-            document.getElementById('categoryModal').classList.add('hidden');
+            document.getElementById('category-modal').style.display = 'none';
+            updateCategoryId = null;
         }
 
-        // Update Category
-        async function updateCategory(category) {
-            const contentId = document.getElementById('categoryContentId').value;
-
+        async function saveCategory() {
+            const category = document.getElementById('update-category').value;
+            
             try {
-                const response = await fetch(`${API_URL}/content/${contentId}/category`, {
+                const response = await fetch(`${API_URL}/content/${updateCategoryId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ category })
                 });
-
-                const result = await response.json();
                 
-                if (result.success) {
-                    alert('✅ Category updated successfully!');
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Category updated successfully!');
                     closeCategoryModal();
-                    loadContent();
+                    loadContent(currentCategory, currentPage);
+                    loadStats();
+                } else {
+                    alert('Error: ' + data.error);
                 }
             } catch (error) {
-                alert('❌ Error updating category: ' + error.message);
+                console.error('Error updating category:', error);
+                alert('Error updating category');
             }
         }
 
-        // Toggle Banner
-        async function toggleBanner(contentId, currentStatus) {
-            try {
-                const response = await fetch(`${API_URL}/content/${contentId}/banner`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ showInBanner: !currentStatus })
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    alert(result.data.showInBanner ? '✅ Added to banner!' : '✅ Removed from banner!');
-                    loadContent();
-                }
-            } catch (error) {
-                alert('❌ Error updating banner: ' + error.message);
+        // Pagination
+        function previousPage() {
+            if (currentPage > 1) {
+                loadContent(currentCategory, currentPage - 1);
             }
         }
 
-        // Delete Content
-        async function deleteContent(id) {
-            if (!confirm('⚠️ Are you sure you want to delete this content?')) return;
-
-            try {
-                const response = await fetch(`${API_URL}/content/${id}`, { method: 'DELETE' });
-                const result = await response.json();
-                
-                if (result.success) {
-                    alert('✅ Content deleted successfully!');
-                    loadContent();
-                }
-            } catch (error) {
-                alert('❌ Error deleting content: ' + error.message);
-            }
+        function nextPage() {
+            loadContent(currentCategory, currentPage + 1);
         }
 
-        // Switch Tab
-        function switchTab(tab) {
-            currentTab = tab;
-            
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('tab-active', 'border-b-2', 'border-purple-500', 'text-purple-600', 'dark:text-purple-400');
-                btn.classList.add('text-gray-500', 'dark:text-gray-400');
+        // Navigation
+        function loadDashboard() {
+            setActiveNav('nav-dashboard');
+            loadContent(null, 1);
+        }
+
+        function loadSearch() {
+            setActiveNav('nav-search');
+        }
+
+        function setActiveNav(navId) {
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+                item.classList.add('text-gray-400');
             });
-            
-            event.target.classList.remove('text-gray-500', 'dark:text-gray-400');
-            event.target.classList.add('tab-active', 'border-b-2', 'border-purple-500', 'text-purple-600', 'dark:text-purple-400');
-            
-            loadContent();
+            const navItem = document.getElementById(navId);
+            if (navItem) {
+                navItem.classList.add('active');
+                navItem.classList.remove('text-gray-400');
+            }
         }
-
-        // Initial Load
-        loadContent();
     </script>
 </body>
 </html>
