@@ -1,11 +1,12 @@
+// index.js - MFlix API Server
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-require('dotenv').config();
+const path = require('path');
 
 const app = express();
 
-// Middleware
+// ==================== MIDDLEWARE ====================
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -14,16 +15,17 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static('public'));
 
-// MongoDB Connection
+// ==================== MONGODB CONNECTION ====================
 const uri = "mongodb+srv://mflixph:XaneKath1@mflixph.wngbqmu.mongodb.net/mflix?appName=mflixph";
-const clientOptions = { serverApi: { version: '1', strict: false, deprecationErrors: true } };
+const clientOptions = { 
+  serverApi: { version: '1', strict: false, deprecationErrors: true } 
+};
 
 mongoose.connect(uri, clientOptions)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // ==================== MONGOOSE SCHEMAS ====================
-
 const animeSchema = new mongoose.Schema({
   anilistId: { type: Number, required: true, unique: true },
   title: {
@@ -57,7 +59,7 @@ const animeSchema = new mongoose.Schema({
     default: 'NEWEST'
   },
   servers: [{
-    name: { type: String, required: true }, // server1, server2
+    name: { type: String, required: true },
     url: { type: String, required: true },
     quality: String,
     isActive: { type: Boolean, default: true }
@@ -70,7 +72,6 @@ const animeSchema = new mongoose.Schema({
 const Anime = mongoose.model('Anime', animeSchema);
 
 // ==================== ANILIST GRAPHQL HELPER ====================
-
 async function fetchFromAniList(query, variables = {}) {
   const response = await fetch('https://graphql.anilist.co', {
     method: 'POST',
@@ -87,7 +88,40 @@ async function fetchFromAniList(query, variables = {}) {
 
 // ==================== API ROUTES ====================
 
-// 1. Search anime from AniList and optionally add to database
+// Root route
+app.get('/', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>MFlix API</title>
+      <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        h1 { color: #1976d2; }
+        .link { display: block; padding: 10px; margin: 10px 0; background: #f5f5f5; border-radius: 5px; text-decoration: none; color: #333; }
+        .link:hover { background: #e0e0e0; }
+      </style>
+    </head>
+    <body>
+      <h1>🎬 MFlix API</h1>
+      <p>Welcome to the MFlix Anime Streaming API!</p>
+      <a href="/admin/index.html" class="link">📊 Go to Admin Dashboard</a>
+      <a href="/api/health" class="link">🏥 API Health Check</a>
+      <h3>API Endpoints:</h3>
+      <ul>
+        <li>GET /api/search?query=naruto - Search anime</li>
+        <li>GET /api/anime - Get all anime</li>
+        <li>GET /api/anime/:id - Get single anime</li>
+        <li>POST /api/anime - Add anime</li>
+        <li>PUT /api/anime/:id/servers - Update servers</li>
+        <li>DELETE /api/anime/:id - Delete anime</li>
+      </ul>
+    </body>
+    </html>
+  `);
+});
+
+// 1. Search anime from AniList
 app.get('/api/search', async (req, res) => {
   try {
     const { query, page = 1, perPage = 20 } = req.query;
@@ -249,12 +283,11 @@ app.get('/api/anime/anilist/:id', async (req, res) => {
   }
 });
 
-// 3. Add anime to database with streaming servers
+// 3. Add anime to database
 app.post('/api/anime', async (req, res) => {
   try {
     const { anilistId, category, servers } = req.body;
     
-    // Fetch anime info from AniList
     const gqlQuery = `
       query ($id: Int) {
         Media(id: $id, type: ANIME) {
@@ -287,7 +320,6 @@ app.post('/api/anime', async (req, res) => {
     
     const anilistData = data.Media;
     
-    // Create or update anime in database
     const anime = await Anime.findOneAndUpdate(
       { anilistId: parseInt(anilistId) },
       {
@@ -372,7 +404,7 @@ app.put('/api/anime/:id/category', async (req, res) => {
   }
 });
 
-// 6. Get all anime from database by category
+// 6. Get anime by category
 app.get('/api/anime/category/:category', async (req, res) => {
   try {
     const { category } = req.params;
@@ -400,7 +432,7 @@ app.get('/api/anime/category/:category', async (req, res) => {
   }
 });
 
-// 7. Get single anime from database
+// 7. Get single anime
 app.get('/api/anime/:id', async (req, res) => {
   try {
     const anime = await Anime.findById(req.params.id);
@@ -415,7 +447,7 @@ app.get('/api/anime/:id', async (req, res) => {
   }
 });
 
-// 8. Get all anime from database
+// 8. Get all anime
 app.get('/api/anime', async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
@@ -442,7 +474,7 @@ app.get('/api/anime', async (req, res) => {
   }
 });
 
-// 9. Delete anime from database
+// 9. Delete anime
 app.delete('/api/anime/:id', async (req, res) => {
   try {
     const anime = await Anime.findByIdAndDelete(req.params.id);
@@ -457,7 +489,7 @@ app.delete('/api/anime/:id', async (req, res) => {
   }
 });
 
-// 10. Get trending anime from AniList
+// 10. Get trending anime
 app.get('/api/trending', async (req, res) => {
   try {
     const { page = 1, perPage = 20 } = req.query;
@@ -494,11 +526,22 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     success: true, 
     message: 'MFlix API is running',
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
   });
 });
 
+// ==================== START SERVER ====================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 MFlix API running on port ${PORT}`);
+  console.log(`
+╔════════════════════════════════════════╗
+║       🎬 MFlix API Server Started      ║
+╠════════════════════════════════════════╣
+║  Port: ${PORT}                           ║
+║  Admin: http://localhost:${PORT}/admin/index.html
+║  API: http://localhost:${PORT}/api         ║
+║  Health: http://localhost:${PORT}/api/health
+╚════════════════════════════════════════╝
+  `);
 });
