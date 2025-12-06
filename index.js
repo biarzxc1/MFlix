@@ -61,12 +61,15 @@ const contentSchema = new mongoose.Schema({
     }]
   }],
   
-  // Categories
+  // Categories (Admin Control)
   category: { 
     type: String, 
     enum: ['newest', 'popular', 'toprated', 'none'],
     default: 'none'
   },
+  
+  // Hero Banner (Admin Control)
+  showInBanner: { type: Boolean, default: false },
   
   // Additional Info
   rating: { type: String, default: 'PG-13' },
@@ -253,7 +256,8 @@ app.post('/api/admin/content', async (req, res) => {
       trailer: anilistData?.trailer?.site === 'youtube' ? 
         `https://www.youtube.com/watch?v=${anilistData.trailer.id}` : null,
       servers: servers || [],
-      category: 'none'
+      category: 'none',
+      showInBanner: false
     });
 
     await content.save();
@@ -318,7 +322,7 @@ app.get('/api/admin/content', async (req, res) => {
     if (featured) query.featured = featured === 'true';
     if (genre) query.genres = genre;
     if (search) query.title = new RegExp(search, 'i');
-    if (category) query.category = category;
+    if (category && category !== 'all') query.category = category;
 
     const skip = (page - 1) * limit;
     
@@ -373,7 +377,28 @@ app.put('/api/admin/content/:id/category', async (req, res) => {
   }
 });
 
-// 6. UPDATE CONTENT (Admin)
+// 6. TOGGLE BANNER (Admin only)
+app.put('/api/admin/content/:id/banner', async (req, res) => {
+  try {
+    const { showInBanner } = req.body;
+
+    const content = await Content.findByIdAndUpdate(
+      req.params.id,
+      { showInBanner: showInBanner === true, updatedAt: Date.now() },
+      { new: true }
+    );
+
+    if (!content) {
+      return res.status(404).json({ error: 'Content not found' });
+    }
+
+    res.json({ success: true, data: content });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 7. UPDATE CONTENT (Admin)
 app.put('/api/admin/content/:id', async (req, res) => {
   try {
     const updates = req.body;
@@ -395,7 +420,7 @@ app.put('/api/admin/content/:id', async (req, res) => {
   }
 });
 
-// 7. DELETE CONTENT (Admin)
+// 8. DELETE CONTENT (Admin)
 app.delete('/api/admin/content/:id', async (req, res) => {
   try {
     const content = await Content.findByIdAndDelete(req.params.id);
@@ -410,25 +435,20 @@ app.delete('/api/admin/content/:id', async (req, res) => {
   }
 });
 
-// ==================== PUBLIC API ROUTES ====================
+// ==================== PUBLIC API ROUTES (FOR YOUR WEBSITE) ====================
 
-// Get content by category
+// Get all content with filters
 app.get('/api/content', async (req, res) => {
   try {
-    const { type, category, page = 1, limit = 20 } = req.query;
+    const { type, page = 1, limit = 20 } = req.query;
     
     const query = {};
     if (type) query.type = type;
-    if (category && category !== 'all') query.category = category;
 
     const skip = (page - 1) * limit;
     
-    let sortBy = { createdAt: -1 };
-    if (category === 'popular') sortBy = { views: -1 };
-    if (category === 'toprated') sortBy = { averageScore: -1 };
-    
     const content = await Content.find(query)
-      .sort(sortBy)
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
     
@@ -444,6 +464,73 @@ app.get('/api/content', async (req, res) => {
         pages: Math.ceil(total / limit)
       }
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get NEWEST content (Admin-selected)
+app.get('/api/newest', async (req, res) => {
+  try {
+    const { type, limit = 20 } = req.query;
+    
+    const query = { category: 'newest' };
+    if (type) query.type = type;
+    
+    const content = await Content.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit));
+    
+    res.json({ success: true, data: content });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get POPULAR content (Admin-selected)
+app.get('/api/popular', async (req, res) => {
+  try {
+    const { type, limit = 20 } = req.query;
+    
+    const query = { category: 'popular' };
+    if (type) query.type = type;
+    
+    const content = await Content.find(query)
+      .sort({ views: -1 })
+      .limit(parseInt(limit));
+    
+    res.json({ success: true, data: content });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get TOP RATED content (Admin-selected)
+app.get('/api/toprated', async (req, res) => {
+  try {
+    const { type, limit = 20 } = req.query;
+    
+    const query = { category: 'toprated' };
+    if (type) query.type = type;
+    
+    const content = await Content.find(query)
+      .sort({ averageScore: -1 })
+      .limit(parseInt(limit));
+    
+    res.json({ success: true, data: content });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get BANNER/HERO content (Admin-selected)
+app.get('/api/banner', async (req, res) => {
+  try {
+    const content = await Content.find({ showInBanner: true })
+      .sort({ createdAt: -1 })
+      .limit(10);
+    
+    res.json({ success: true, data: content });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -499,6 +586,44 @@ app.post('/api/content/:id/like', async (req, res) => {
   }
 });
 
+// Search content
+app.get('/api/search', async (req, res) => {
+  try {
+    const { q, type, page = 1, limit = 20 } = req.query;
+    
+    if (!q) {
+      return res.status(400).json({ error: 'Search query required' });
+    }
+
+    const query = {
+      title: new RegExp(q, 'i')
+    };
+    if (type) query.type = type;
+
+    const skip = (page - 1) * limit;
+    
+    const content = await Content.find(query)
+      .sort({ popularity: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Content.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: content,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Root route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -513,13 +638,19 @@ app.get('/api', (req, res) => {
       addContent: 'POST /api/admin/content',
       addServer: 'POST /api/admin/content/:id/servers',
       updateCategory: 'PUT /api/admin/content/:id/category',
+      toggleBanner: 'PUT /api/admin/content/:id/banner',
       getAll: 'GET /api/admin/content',
       update: 'PUT /api/admin/content/:id',
       delete: 'DELETE /api/admin/content/:id'
     },
     publicEndpoints: {
-      getContent: 'GET /api/content?category=newest',
+      getAllContent: 'GET /api/content',
+      getNewest: 'GET /api/newest',
+      getPopular: 'GET /api/popular',
+      getTopRated: 'GET /api/toprated',
+      getBanner: 'GET /api/banner',
       getOne: 'GET /api/content/:id',
+      search: 'GET /api/search?q=naruto',
       featured: 'GET /api/featured',
       like: 'POST /api/content/:id/like'
     }
