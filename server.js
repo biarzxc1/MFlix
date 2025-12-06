@@ -1,46 +1,35 @@
-// server.js
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
 const axios = require('axios');
-const path = require('path');
+const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
 
 // MongoDB Connection
-const uri = "mongodb+srv://mflixph:XaneKath1@mflixph.wngbqmu.mongodb.net/mflix?appName=mflixph";
-const clientOptions = { 
-  serverApi: { version: '1', strict: false, deprecationErrors: true }
-};
+const uri = "mongodb+srv://mflixph:XaneKath1@mflixph.wngbqmu.mongodb.net/?appName=mflixph";
+const clientOptions = { serverApi: { version: '1', strict: false, deprecationErrors: true } };
 
 mongoose.connect(uri, clientOptions)
-  .then(() => console.log('✅ Connected to MongoDB!'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
-
-// ==================== SCHEMAS ====================
+  .then(() => console.log("✓ Connected to MongoDB!"))
+  .catch(err => console.error("MongoDB connection error:", err));
 
 // Content Schema
 const contentSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  type: { 
-    type: String, 
-    enum: ['ANIME', 'MOVIE', 'KDRAMA', 'SERIES', 'CDRAMA', 'JDRAMA'],
-    required: true 
-  },
-  
-  // AniList Data
   anilistId: { type: Number, unique: true, sparse: true },
+  title: {
+    english: String,
+    romaji: String,
+    native: String
+  },
+  type: { type: String, enum: ['ANIME', 'MOVIE', 'KDRAMA', 'OTHER'] },
+  description: String,
   coverImage: String,
   bannerImage: String,
-  description: String,
   genres: [String],
-  tags: [String],
   episodes: Number,
   duration: Number,
   status: String,
@@ -48,69 +37,438 @@ const contentSchema = new mongoose.Schema({
   seasonYear: Number,
   averageScore: Number,
   popularity: Number,
-  studios: [String],
-  
-  // Streaming Links
+  trending: Number,
+  category: { type: String, enum: ['UPCOMING', 'NEWEST', 'POPULAR', 'TOP_RATED'], default: 'NEWEST' },
   servers: [{
-    serverName: { type: String, enum: ['server1', 'server2'], required: true },
-    episodes: [{
-      episodeNumber: { type: Number, required: true },
-      title: String,
-      url: { type: String, required: true },
-      uploadedAt: { type: Date, default: Date.now }
-    }]
+    name: { type: String, enum: ['server1', 'server2'] },
+    url: String,
+    episode: Number,
+    quality: String
   }],
-  
-  // Categories (Admin Control)
-  category: { 
-    type: String, 
-    enum: ['newest', 'popular', 'toprated', 'none'],
-    default: 'none'
+  trailer: {
+    id: String,
+    site: String
   },
-  
-  // Hero Banner (Admin Control)
-  showInBanner: { type: Boolean, default: false },
-  
-  // Additional Info
-  rating: { type: String, default: 'PG-13' },
   releaseDate: Date,
-  trailer: String,
-  
-  // Metadata
-  views: { type: Number, default: 0 },
-  likes: { type: Number, default: 0 },
-  featured: { type: Boolean, default: false },
+  tags: [String],
+  studios: [String],
+  isAdult: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
 
+// Add indexes for better performance
+contentSchema.index({ category: 1, createdAt: -1 });
+contentSchema.index({ category: 1, popularity: -1 });
+contentSchema.index({ category: 1, averageScore: -1 });
+contentSchema.index({ 'title.english': 'text', 'title.romaji': 'text' });
+
 const Content = mongoose.model('Content', contentSchema);
 
-// ==================== ANILIST GRAPHQL API ====================
-
+// AniList GraphQL API Configuration
 const ANILIST_API = 'https://graphql.anilist.co';
 
-async function searchAniList(query, type = 'ANIME') {
-  const graphqlQuery = `
-    query ($search: String, $type: MediaType) {
-      Page(page: 1, perPage: 10) {
-        media(search: $search, type: $type) {
+// Helper: Query AniList API
+async function queryAniList(query, variables = {}) {
+  try {
+    const response = await axios.post(ANILIST_API, {
+      query,
+      variables
+    }, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return response.data.data;
+  } catch (error) {
+    throw new Error(`AniList API Error: ${error.message}`);
+  }
+}
+
+// ==================== PUBLIC API FOR WEBSITE ====================
+
+// Get newest content for website
+app.get('/public/newest', async (req, res) => {
+  try {
+    const { page = 1, limit = 20, type } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const filter = { category: 'NEWEST' };
+    if (type) filter.type = type.toUpperCase();
+    
+    const content = await Content.find(filter)
+      .select('-__v')
+      .sort('-createdAt')
+      .limit(parseInt(limit))
+      .skip(skip)
+      .lean();
+    
+    const total = await Content.countDocuments(filter);
+    
+    res.json({
+      success: true,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      totalItems: total,
+      data: content
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get popular content for website
+app.get('/public/popular', async (req, res) => {
+  try {
+    const { page = 1, limit = 20, type } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const filter = { category: 'POPULAR' };
+    if (type) filter.type = type.toUpperCase();
+    
+    const content = await Content.find(filter)
+      .select('-__v')
+      .sort('-popularity -averageScore')
+      .limit(parseInt(limit))
+      .skip(skip)
+      .lean();
+    
+    const total = await Content.countDocuments(filter);
+    
+    res.json({
+      success: true,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      totalItems: total,
+      data: content
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get top rated content for website
+app.get('/public/top-rated', async (req, res) => {
+  try {
+    const { page = 1, limit = 20, type } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const filter = { category: 'TOP_RATED', averageScore: { $exists: true, $ne: null } };
+    if (type) filter.type = type.toUpperCase();
+    
+    const content = await Content.find(filter)
+      .select('-__v')
+      .sort('-averageScore -popularity')
+      .limit(parseInt(limit))
+      .skip(skip)
+      .lean();
+    
+    const total = await Content.countDocuments(filter);
+    
+    res.json({
+      success: true,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      totalItems: total,
+      data: content
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get upcoming content for website
+app.get('/public/upcoming', async (req, res) => {
+  try {
+    const { page = 1, limit = 20, type } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const filter = { category: 'UPCOMING' };
+    if (type) filter.type = type.toUpperCase();
+    
+    const content = await Content.find(filter)
+      .select('-__v')
+      .sort('-releaseDate -popularity')
+      .limit(parseInt(limit))
+      .skip(skip)
+      .lean();
+    
+    const total = await Content.countDocuments(filter);
+    
+    res.json({
+      success: true,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      totalItems: total,
+      data: content
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get single content info for website (for watch page)
+app.get('/public/watch/:id', async (req, res) => {
+  try {
+    const content = await Content.findById(req.params.id)
+      .select('-__v')
+      .lean();
+    
+    if (!content) {
+      return res.status(404).json({ success: false, error: 'Content not found' });
+    }
+    
+    // Group servers by episode
+    const serversByEpisode = {};
+    content.servers.forEach(server => {
+      if (!serversByEpisode[server.episode]) {
+        serversByEpisode[server.episode] = [];
+      }
+      serversByEpisode[server.episode].push({
+        name: server.name,
+        url: server.url,
+        quality: server.quality || 'HD'
+      });
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        ...content,
+        serversByEpisode
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get servers for specific episode
+app.get('/public/watch/:id/episode/:episode', async (req, res) => {
+  try {
+    const { id, episode } = req.params;
+    
+    const content = await Content.findById(id)
+      .select('title servers episodes')
+      .lean();
+    
+    if (!content) {
+      return res.status(404).json({ success: false, error: 'Content not found' });
+    }
+    
+    const episodeNum = parseInt(episode);
+    const servers = content.servers.filter(s => s.episode === episodeNum);
+    
+    if (servers.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'No servers available for this episode' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      title: content.title,
+      episode: episodeNum,
+      totalEpisodes: content.episodes,
+      servers: servers.map(s => ({
+        name: s.name,
+        url: s.url,
+        quality: s.quality || 'HD'
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Search content for website
+app.get('/public/search', async (req, res) => {
+  try {
+    const { q, page = 1, limit = 20, type } = req.query;
+    
+    if (!q) {
+      return res.status(400).json({ success: false, error: 'Search query is required' });
+    }
+    
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const filter = { 
+      $or: [
+        { 'title.english': { $regex: q, $options: 'i' } },
+        { 'title.romaji': { $regex: q, $options: 'i' } }
+      ]
+    };
+    
+    if (type) filter.type = type.toUpperCase();
+    
+    const content = await Content.find(filter)
+      .select('-__v')
+      .sort('-popularity')
+      .limit(parseInt(limit))
+      .skip(skip)
+      .lean();
+    
+    const total = await Content.countDocuments(filter);
+    
+    res.json({
+      success: true,
+      query: q,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      totalItems: total,
+      data: content
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get content by genre
+app.get('/public/genre/:genre', async (req, res) => {
+  try {
+    const { genre } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const content = await Content.find({ 
+      genres: { $regex: new RegExp(genre, 'i') }
+    })
+      .select('-__v')
+      .sort('-popularity')
+      .limit(parseInt(limit))
+      .skip(skip)
+      .lean();
+    
+    const total = await Content.countDocuments({ 
+      genres: { $regex: new RegExp(genre, 'i') }
+    });
+    
+    res.json({
+      success: true,
+      genre,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      totalItems: total,
+      data: content
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get trending content
+app.get('/public/trending', async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    
+    const content = await Content.find({ trending: { $exists: true, $gt: 0 } })
+      .select('-__v')
+      .sort('-trending -popularity')
+      .limit(parseInt(limit))
+      .lean();
+    
+    res.json({
+      success: true,
+      data: content
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get recently added
+app.get('/public/recent', async (req, res) => {
+  try {
+    const { limit = 20 } = req.query;
+    
+    const content = await Content.find()
+      .select('-__v')
+      .sort('-createdAt')
+      .limit(parseInt(limit))
+      .lean();
+    
+    res.json({
+      success: true,
+      data: content
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==================== ADMIN API (Protected) ====================
+
+// Search AniList and get content info
+app.get('/api/search', async (req, res) => {
+  try {
+    const { query, type = 'ANIME', page = 1, perPage = 20 } = req.query;
+    
+    const gqlQuery = `
+      query ($search: String, $type: MediaType, $page: Int, $perPage: Int) {
+        Page(page: $page, perPage: $perPage) {
+          media(search: $search, type: $type) {
+            id
+            title { romaji english native }
+            type
+            format
+            description
+            coverImage { large extraLarge }
+            bannerImage
+            genres
+            episodes
+            duration
+            status
+            season
+            seasonYear
+            averageScore
+            popularity
+            trending
+            startDate { year month day }
+            trailer { id site }
+            tags { name }
+            studios(isMain: true) { nodes { name } }
+            isAdult
+          }
+        }
+      }
+    `;
+
+    const data = await queryAniList(gqlQuery, { 
+      search: query, 
+      type: type.toUpperCase(),
+      page: parseInt(page),
+      perPage: parseInt(perPage)
+    });
+
+    res.json({
+      success: true,
+      results: data.Page.media
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Import content from AniList to database
+app.post('/api/import', async (req, res) => {
+  try {
+    const { anilistId, category = 'NEWEST', servers = [] } = req.body;
+
+    const gqlQuery = `
+      query ($id: Int) {
+        Media(id: $id) {
           id
-          title {
-            romaji
-            english
-            native
-          }
-          coverImage {
-            large
-            extraLarge
-          }
-          bannerImage
+          title { romaji english native }
+          type
+          format
           description
+          coverImage { large extraLarge }
+          bannerImage
           genres
-          tags {
-            name
-          }
           episodes
           duration
           status
@@ -118,546 +476,411 @@ async function searchAniList(query, type = 'ANIME') {
           seasonYear
           averageScore
           popularity
-          studios {
-            nodes {
-              name
-            }
-          }
-          startDate {
-            year
-            month
-            day
-          }
-          trailer {
-            id
-            site
-          }
+          trending
+          startDate { year month day }
+          trailer { id site }
+          tags { name }
+          studios(isMain: true) { nodes { name } }
+          isAdult
         }
       }
-    }
-  `;
+    `;
 
-  try {
-    const response = await axios.post(ANILIST_API, {
-      query: graphqlQuery,
-      variables: { search: query, type }
-    });
-    return response.data.data.Page.media;
-  } catch (error) {
-    console.error('AniList API Error:', error.message);
-    return [];
-  }
-}
+    const data = await queryAniList(gqlQuery, { id: parseInt(anilistId) });
+    const media = data.Media;
 
-async function getAniListDetails(id) {
-  const graphqlQuery = `
-    query ($id: Int) {
-      Media(id: $id) {
-        id
-        title {
-          romaji
-          english
-          native
-        }
-        coverImage {
-          large
-          extraLarge
-        }
-        bannerImage
-        description
-        genres
-        tags {
-          name
-        }
-        episodes
-        duration
-        status
-        season
-        seasonYear
-        averageScore
-        popularity
-        studios {
-          nodes {
-            name
-          }
-        }
-        startDate {
-          year
-          month
-          day
-        }
-        trailer {
-          id
-          site
-        }
-      }
-    }
-  `;
-
-  try {
-    const response = await axios.post(ANILIST_API, {
-      query: graphqlQuery,
-      variables: { id }
-    });
-    return response.data.data.Media;
-  } catch (error) {
-    console.error('AniList API Error:', error.message);
-    return null;
-  }
-}
-
-// ==================== ADMIN API ROUTES ====================
-
-// 1. SEARCH ANILIST
-app.get('/api/admin/search/anilist', async (req, res) => {
-  try {
-    const { query, type = 'ANIME' } = req.query;
-    
-    if (!query) {
-      return res.status(400).json({ error: 'Query parameter is required' });
-    }
-
-    const results = await searchAniList(query, type);
-    res.json({ success: true, count: results.length, data: results });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 2. ADD CONTENT (Admin only)
-app.post('/api/admin/content', async (req, res) => {
-  try {
-    const { anilistId, title, type, servers } = req.body;
-
-    let anilistData = null;
-    if (anilistId) {
-      anilistData = await getAniListDetails(anilistId);
-    }
+    // Map type
+    let contentType = 'ANIME';
+    if (media.format === 'MOVIE') contentType = 'MOVIE';
 
     const content = new Content({
-      title: anilistData?.title?.english || anilistData?.title?.romaji || title,
-      type: type || 'ANIME',
-      anilistId: anilistData?.id,
-      coverImage: anilistData?.coverImage?.extraLarge,
-      bannerImage: anilistData?.bannerImage,
-      description: anilistData?.description?.replace(/<[^>]*>/g, ''),
-      genres: anilistData?.genres || [],
-      tags: anilistData?.tags?.map(t => t.name) || [],
-      episodes: anilistData?.episodes,
-      duration: anilistData?.duration,
-      status: anilistData?.status,
-      season: anilistData?.season,
-      seasonYear: anilistData?.seasonYear,
-      averageScore: anilistData?.averageScore,
-      popularity: anilistData?.popularity,
-      studios: anilistData?.studios?.nodes?.map(s => s.name) || [],
-      releaseDate: anilistData?.startDate ? 
-        new Date(anilistData.startDate.year, anilistData.startDate.month - 1, anilistData.startDate.day) : null,
-      trailer: anilistData?.trailer?.site === 'youtube' ? 
-        `https://www.youtube.com/watch?v=${anilistData.trailer.id}` : null,
-      servers: servers || [],
-      category: 'none',
-      showInBanner: false
+      anilistId: media.id,
+      title: {
+        english: media.title.english,
+        romaji: media.title.romaji,
+        native: media.title.native
+      },
+      type: contentType,
+      description: media.description?.replace(/<[^>]*>/g, ''),
+      coverImage: media.coverImage?.extraLarge || media.coverImage?.large,
+      bannerImage: media.bannerImage,
+      genres: media.genres,
+      episodes: media.episodes,
+      duration: media.duration,
+      status: media.status,
+      season: media.season,
+      seasonYear: media.seasonYear,
+      averageScore: media.averageScore,
+      popularity: media.popularity,
+      trending: media.trending,
+      category: category.toUpperCase(),
+      servers: servers,
+      trailer: media.trailer,
+      tags: media.tags?.map(t => t.name) || [],
+      studios: media.studios?.nodes?.map(s => s.name) || [],
+      isAdult: media.isAdult,
+      releaseDate: media.startDate?.year ? 
+        new Date(media.startDate.year, (media.startDate.month || 1) - 1, media.startDate.day || 1) : 
+        new Date()
     });
 
     await content.save();
-    res.status(201).json({ success: true, data: content });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 3. ADD/UPDATE SERVER LINKS (Admin only)
-app.post('/api/admin/content/:id/servers', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { serverName, episodeNumber, episodeTitle, url } = req.body;
-
-    if (!['server1', 'server2'].includes(serverName)) {
-      return res.status(400).json({ error: 'Server must be server1 or server2' });
-    }
-
-    const content = await Content.findById(id);
-    if (!content) {
-      return res.status(404).json({ error: 'Content not found' });
-    }
-
-    let server = content.servers.find(s => s.serverName === serverName);
-    if (!server) {
-      server = { serverName, episodes: [] };
-      content.servers.push(server);
-    }
-
-    const episodeIndex = server.episodes.findIndex(e => e.episodeNumber === episodeNumber);
-    if (episodeIndex > -1) {
-      server.episodes[episodeIndex].url = url;
-      server.episodes[episodeIndex].title = episodeTitle;
-    } else {
-      server.episodes.push({
-        episodeNumber,
-        title: episodeTitle,
-        url
-      });
-    }
-
-    server.episodes.sort((a, b) => a.episodeNumber - b.episodeNumber);
-
-    content.updatedAt = Date.now();
-    await content.save();
-
-    res.json({ success: true, data: content });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 4. GET ALL CONTENT (Admin)
-app.get('/api/admin/content', async (req, res) => {
-  try {
-    const { type, genre, status, featured, search, page = 1, limit = 50, category } = req.query;
-    
-    const query = {};
-    if (type) query.type = type;
-    if (status) query.status = status;
-    if (featured) query.featured = featured === 'true';
-    if (genre) query.genres = genre;
-    if (search) query.title = new RegExp(search, 'i');
-    if (category && category !== 'all') query.category = category;
-
-    const skip = (page - 1) * limit;
-    
-    let sortBy = { createdAt: -1 };
-    if (category === 'popular') sortBy = { views: -1 };
-    if (category === 'toprated') sortBy = { averageScore: -1 };
-    
-    const content = await Content.find(query)
-      .sort(sortBy)
-      .skip(skip)
-      .limit(parseInt(limit));
-    
-    const total = await Content.countDocuments(query);
 
     res.json({
       success: true,
-      data: content,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
+      message: 'Content imported successfully',
+      content
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Content already exists in database' 
+      });
+    }
+    res.status(500).json({ success: false, error: error.message });
   }
 });
-
-// 5. UPDATE CONTENT CATEGORY (Admin only)
-app.put('/api/admin/content/:id/category', async (req, res) => {
-  try {
-    const { category } = req.body;
-    
-    if (!['newest', 'popular', 'toprated', 'none'].includes(category)) {
-      return res.status(400).json({ error: 'Invalid category' });
-    }
-
-    const content = await Content.findByIdAndUpdate(
-      req.params.id,
-      { category, updatedAt: Date.now() },
-      { new: true }
-    );
-
-    if (!content) {
-      return res.status(404).json({ error: 'Content not found' });
-    }
-
-    res.json({ success: true, data: content });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 6. TOGGLE BANNER (Admin only)
-app.put('/api/admin/content/:id/banner', async (req, res) => {
-  try {
-    const { showInBanner } = req.body;
-
-    const content = await Content.findByIdAndUpdate(
-      req.params.id,
-      { showInBanner: showInBanner === true, updatedAt: Date.now() },
-      { new: true }
-    );
-
-    if (!content) {
-      return res.status(404).json({ error: 'Content not found' });
-    }
-
-    res.json({ success: true, data: content });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 7. UPDATE CONTENT (Admin)
-app.put('/api/admin/content/:id', async (req, res) => {
-  try {
-    const updates = req.body;
-    updates.updatedAt = Date.now();
-    
-    const content = await Content.findByIdAndUpdate(
-      req.params.id,
-      updates,
-      { new: true }
-    );
-
-    if (!content) {
-      return res.status(404).json({ error: 'Content not found' });
-    }
-
-    res.json({ success: true, data: content });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 8. DELETE CONTENT (Admin)
-app.delete('/api/admin/content/:id', async (req, res) => {
-  try {
-    const content = await Content.findByIdAndDelete(req.params.id);
-    
-    if (!content) {
-      return res.status(404).json({ error: 'Content not found' });
-    }
-
-    res.json({ success: true, message: 'Content deleted' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ==================== PUBLIC API ROUTES (FOR YOUR WEBSITE) ====================
 
 // Get all content with filters
 app.get('/api/content', async (req, res) => {
   try {
-    const { type, page = 1, limit = 20 } = req.query;
-    
-    const query = {};
-    if (type) query.type = type;
+    const { 
+      category, 
+      type, 
+      page = 1, 
+      limit = 20,
+      sort = '-createdAt'
+    } = req.query;
 
-    const skip = (page - 1) * limit;
-    
-    const content = await Content.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-    
-    const total = await Content.countDocuments(query);
+    const filter = {};
+    if (category) filter.category = category.toUpperCase();
+    if (type) filter.type = type.toUpperCase();
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const content = await Content.find(filter)
+      .sort(sort)
+      .limit(parseInt(limit))
+      .skip(skip);
+
+    const total = await Content.countDocuments(filter);
 
     res.json({
       success: true,
-      data: content,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
+      page: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      totalItems: total,
+      content
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Get NEWEST content (Admin-selected)
-app.get('/api/newest', async (req, res) => {
+// Get content by category
+app.get('/api/content/upcoming', async (req, res) => {
   try {
-    const { type, limit = 20 } = req.query;
-    
-    const query = { category: 'newest' };
-    if (type) query.type = type;
-    
-    const content = await Content.find(query)
-      .sort({ createdAt: -1 })
-      .limit(parseInt(limit));
-    
-    res.json({ success: true, data: content });
+    const content = await Content.find({ category: 'UPCOMING' })
+      .sort('-releaseDate')
+      .limit(20);
+    res.json({ success: true, content });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Get POPULAR content (Admin-selected)
-app.get('/api/popular', async (req, res) => {
+app.get('/api/content/newest', async (req, res) => {
   try {
-    const { type, limit = 20 } = req.query;
-    
-    const query = { category: 'popular' };
-    if (type) query.type = type;
-    
-    const content = await Content.find(query)
-      .sort({ views: -1 })
-      .limit(parseInt(limit));
-    
-    res.json({ success: true, data: content });
+    const content = await Content.find({ category: 'NEWEST' })
+      .sort('-createdAt')
+      .limit(20);
+    res.json({ success: true, content });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Get TOP RATED content (Admin-selected)
-app.get('/api/toprated', async (req, res) => {
+app.get('/api/content/popular', async (req, res) => {
   try {
-    const { type, limit = 20 } = req.query;
-    
-    const query = { category: 'toprated' };
-    if (type) query.type = type;
-    
-    const content = await Content.find(query)
-      .sort({ averageScore: -1 })
-      .limit(parseInt(limit));
-    
-    res.json({ success: true, data: content });
+    const content = await Content.find({ category: 'POPULAR' })
+      .sort('-popularity')
+      .limit(20);
+    res.json({ success: true, content });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Get BANNER/HERO content (Admin-selected)
-app.get('/api/banner', async (req, res) => {
+app.get('/api/content/top-rated', async (req, res) => {
   try {
-    const content = await Content.find({ showInBanner: true })
-      .sort({ createdAt: -1 })
-      .limit(10);
-    
-    res.json({ success: true, data: content });
+    const content = await Content.find({ category: 'TOP_RATED' })
+      .sort('-averageScore')
+      .limit(20);
+    res.json({ success: true, content });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Get single content
+// Get single content by ID
 app.get('/api/content/:id', async (req, res) => {
   try {
     const content = await Content.findById(req.params.id);
-    
     if (!content) {
-      return res.status(404).json({ error: 'Content not found' });
+      return res.status(404).json({ success: false, error: 'Content not found' });
     }
-
-    content.views += 1;
-    await content.save();
-
-    res.json({ success: true, data: content });
+    res.json({ success: true, content });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Get featured content
-app.get('/api/featured', async (req, res) => {
+// Update content (category, servers, etc.)
+app.put('/api/content/:id', async (req, res) => {
   try {
-    const content = await Content.find({ featured: true })
-      .sort({ popularity: -1 })
-      .limit(10);
+    const { category, servers, type } = req.body;
     
-    res.json({ success: true, data: content });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+    const updateData = { updatedAt: Date.now() };
+    if (category) updateData.category = category.toUpperCase();
+    if (servers) updateData.servers = servers;
+    if (type) updateData.type = type.toUpperCase();
 
-// Like content
-app.post('/api/content/:id/like', async (req, res) => {
-  try {
     const content = await Content.findByIdAndUpdate(
       req.params.id,
-      { $inc: { likes: 1 } },
-      { new: true }
+      updateData,
+      { new: true, runValidators: true }
     );
 
     if (!content) {
-      return res.status(404).json({ error: 'Content not found' });
+      return res.status(404).json({ success: false, error: 'Content not found' });
     }
-
-    res.json({ success: true, likes: content.likes });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Search content
-app.get('/api/search', async (req, res) => {
-  try {
-    const { q, type, page = 1, limit = 20 } = req.query;
-    
-    if (!q) {
-      return res.status(400).json({ error: 'Search query required' });
-    }
-
-    const query = {
-      title: new RegExp(q, 'i')
-    };
-    if (type) query.type = type;
-
-    const skip = (page - 1) * limit;
-    
-    const content = await Content.find(query)
-      .sort({ popularity: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-    
-    const total = await Content.countDocuments(query);
 
     res.json({
       success: true,
-      data: content,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
+      message: 'Content updated successfully',
+      content
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Root route
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Delete content
+app.delete('/api/content/:id', async (req, res) => {
+  try {
+    const content = await Content.findByIdAndDelete(req.params.id);
+    if (!content) {
+      return res.status(404).json({ success: false, error: 'Content not found' });
+    }
+    res.json({ success: true, message: 'Content deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
-app.get('/api', (req, res) => {
+// Add or update server link
+app.post('/api/content/:id/servers', async (req, res) => {
+  try {
+    const { serverName, url, episode = 1, quality = 'HD' } = req.body;
+
+    if (!['server1', 'server2'].includes(serverName)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Server name must be server1 or server2' 
+      });
+    }
+
+    const content = await Content.findById(req.params.id);
+    if (!content) {
+      return res.status(404).json({ success: false, error: 'Content not found' });
+    }
+
+    // Check if server already exists for this episode
+    const existingServerIndex = content.servers.findIndex(
+      s => s.name === serverName && s.episode === episode
+    );
+
+    if (existingServerIndex !== -1) {
+      content.servers[existingServerIndex].url = url;
+      content.servers[existingServerIndex].quality = quality;
+    } else {
+      content.servers.push({ name: serverName, url, episode, quality });
+    }
+
+    content.updatedAt = Date.now();
+    await content.save();
+
+    res.json({
+      success: true,
+      message: 'Server link added/updated successfully',
+      content
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Bulk add servers for multiple episodes
+app.post('/api/content/:id/servers/bulk', async (req, res) => {
+  try {
+    const { servers } = req.body;
+    
+    if (!Array.isArray(servers)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Servers must be an array' 
+      });
+    }
+
+    const content = await Content.findById(req.params.id);
+    if (!content) {
+      return res.status(404).json({ success: false, error: 'Content not found' });
+    }
+
+    servers.forEach(server => {
+      if (!['server1', 'server2'].includes(server.serverName)) return;
+      
+      const existingIndex = content.servers.findIndex(
+        s => s.name === server.serverName && s.episode === server.episode
+      );
+
+      if (existingIndex !== -1) {
+        content.servers[existingIndex].url = server.url;
+        content.servers[existingIndex].quality = server.quality || 'HD';
+      } else {
+        content.servers.push({ 
+          name: server.serverName, 
+          url: server.url, 
+          episode: server.episode,
+          quality: server.quality || 'HD'
+        });
+      }
+    });
+
+    content.updatedAt = Date.now();
+    await content.save();
+
+    res.json({
+      success: true,
+      message: `${servers.length} server links added/updated successfully`,
+      content
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get servers for specific content and episode
+app.get('/api/content/:id/servers', async (req, res) => {
+  try {
+    const { episode = 1 } = req.query;
+    const content = await Content.findById(req.params.id);
+    
+    if (!content) {
+      return res.status(404).json({ success: false, error: 'Content not found' });
+    }
+
+    const servers = content.servers.filter(s => s.episode === parseInt(episode));
+
+    res.json({
+      success: true,
+      episode: parseInt(episode),
+      servers
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Remove server link
+app.delete('/api/content/:id/servers/:serverId', async (req, res) => {
+  try {
+    const content = await Content.findById(req.params.id);
+    if (!content) {
+      return res.status(404).json({ success: false, error: 'Content not found' });
+    }
+
+    content.servers = content.servers.filter(
+      s => s._id.toString() !== req.params.serverId
+    );
+    content.updatedAt = Date.now();
+    await content.save();
+
+    res.json({
+      success: true,
+      message: 'Server link removed successfully',
+      content
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Statistics
+app.get('/api/stats', async (req, res) => {
+  try {
+    const stats = {
+      total: await Content.countDocuments(),
+      byType: {
+        anime: await Content.countDocuments({ type: 'ANIME' }),
+        movie: await Content.countDocuments({ type: 'MOVIE' }),
+        kdrama: await Content.countDocuments({ type: 'KDRAMA' })
+      },
+      byCategory: {
+        upcoming: await Content.countDocuments({ category: 'UPCOMING' }),
+        newest: await Content.countDocuments({ category: 'NEWEST' }),
+        popular: await Content.countDocuments({ category: 'POPULAR' }),
+        topRated: await Content.countDocuments({ category: 'TOP_RATED' })
+      }
+    };
+    res.json({ success: true, stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'MFlix API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// API Documentation
+app.get('/', (req, res) => {
   res.json({
-    message: 'Welcome to MFlix API',
+    name: 'MFlix API',
     version: '1.0.0',
-    adminEndpoints: {
-      search: 'GET /api/admin/search/anilist?query=naruto&type=ANIME',
-      addContent: 'POST /api/admin/content',
-      addServer: 'POST /api/admin/content/:id/servers',
-      updateCategory: 'PUT /api/admin/content/:id/category',
-      toggleBanner: 'PUT /api/admin/content/:id/banner',
-      getAll: 'GET /api/admin/content',
-      update: 'PUT /api/admin/content/:id',
-      delete: 'DELETE /api/admin/content/:id'
-    },
-    publicEndpoints: {
-      getAllContent: 'GET /api/content',
-      getNewest: 'GET /api/newest',
-      getPopular: 'GET /api/popular',
-      getTopRated: 'GET /api/toprated',
-      getBanner: 'GET /api/banner',
-      getOne: 'GET /api/content/:id',
-      search: 'GET /api/search?q=naruto',
-      featured: 'GET /api/featured',
-      like: 'POST /api/content/:id/like'
+    endpoints: {
+      public: {
+        newest: 'GET /public/newest',
+        popular: 'GET /public/popular',
+        topRated: 'GET /public/top-rated',
+        upcoming: 'GET /public/upcoming',
+        watch: 'GET /public/watch/:id',
+        episode: 'GET /public/watch/:id/episode/:episode',
+        search: 'GET /public/search?q=query',
+        genre: 'GET /public/genre/:genre',
+        trending: 'GET /public/trending',
+        recent: 'GET /public/recent'
+      },
+      admin: {
+        search: 'GET /api/search?query=name',
+        import: 'POST /api/import',
+        content: 'GET /api/content',
+        stats: 'GET /api/stats'
+      }
     }
   });
 });
 
 // Start server
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 MFlix API running on port ${PORT}`);
+  console.log(`📡 Public API: http://localhost:${PORT}/public`);
+  console.log(`🔐 Admin API: http://localhost:${PORT}/api`);
 });
