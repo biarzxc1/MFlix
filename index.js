@@ -13,7 +13,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-app.use(express.static('admin'));
+app.use(express.static('public'));
 
 // ==================== MONGODB CONNECTION ====================
 const uri = "mongodb+srv://mflixph:XaneKath1@mflixph.wngbqmu.mongodb.net/mflix?appName=mflixph";
@@ -88,6 +88,150 @@ async function fetchFromAniList(query, variables = {}) {
 
 // ==================== API ROUTES ====================
 
+// ==================== PUBLIC API ENDPOINTS (For Your Website) ====================
+
+// PUBLIC: Get all anime (paginated)
+// ENDPOINT: GET /api/public/anime?page=1&limit=20
+app.get('/api/public/anime', async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    
+    const anime = await Anime.find()
+      .sort({ updatedAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+    
+    const total = await Anime.countDocuments();
+    
+    res.json({
+      success: true,
+      data: anime,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUBLIC: Get anime by category (NEWEST, POPULAR, TOP_RATED, UPCOMING)
+// ENDPOINT: GET /api/public/category/NEWEST?page=1&limit=20
+app.get('/api/public/category/:category', async (req, res) => {
+  try {
+    const { category } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    
+    const anime = await Anime.find({ category: category.toUpperCase() })
+      .sort({ updatedAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+    
+    const total = await Anime.countDocuments({ category: category.toUpperCase() });
+    
+    res.json({
+      success: true,
+      data: anime,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUBLIC: Get single anime by ID with servers (default server1)
+// ENDPOINT: GET /api/public/anime/:id
+// Response includes all anime info + servers (server1 is default)
+app.get('/api/public/anime/:id', async (req, res) => {
+  try {
+    const anime = await Anime.findById(req.params.id);
+    
+    if (!anime) {
+      return res.status(404).json({ success: false, error: 'Anime not found' });
+    }
+    
+    // Format response with default server
+    const response = {
+      success: true,
+      data: {
+        ...anime.toObject(),
+        defaultServer: anime.servers.find(s => s.name === 'server1') || anime.servers[0]
+      }
+    };
+    
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUBLIC: Search anime by title
+// ENDPOINT: GET /api/public/search?query=naruto&page=1&limit=20
+// This searches YOUR database only (uploaded anime), NOT AniList
+app.get('/api/public/search', async (req, res) => {
+  try {
+    const { query, page = 1, limit = 20 } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ success: false, error: 'Query parameter is required' });
+    }
+    
+    const searchRegex = new RegExp(query, 'i');
+    
+    const anime = await Anime.find({
+      $or: [
+        { 'title.romaji': searchRegex },
+        { 'title.english': searchRegex },
+        { 'title.native': searchRegex }
+      ]
+    })
+      .sort({ popularity: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+    
+    const total = await Anime.countDocuments({
+      $or: [
+        { 'title.romaji': searchRegex },
+        { 'title.english': searchRegex },
+        { 'title.native': searchRegex }
+      ]
+    });
+    
+    // If no results found, return error message
+    if (anime.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: `"${query}" is not uploaded to our server. Please contact the admin to upload it.`,
+        message: 'Anime not found in database',
+        query: query
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: anime,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==================== ADMIN API ENDPOINTS ====================
+
 // Root route
 app.get('/', (req, res) => {
   res.send(`
@@ -121,7 +265,8 @@ app.get('/', (req, res) => {
   `);
 });
 
-// 1. Search anime from AniList
+// 1. ADMIN ONLY: Search anime from AniList (not your database)
+// This is used by admin to find anime to add from AniList
 app.get('/api/search', async (req, res) => {
   try {
     const { query, page = 1, perPage = 20 } = req.query;
@@ -362,6 +507,32 @@ app.put('/api/anime/:id/servers', async (req, res) => {
     const anime = await Anime.findByIdAndUpdate(
       id,
       { servers, updatedAt: new Date() },
+      { new: true }
+    );
+    
+    if (!anime) {
+      return res.status(404).json({ success: false, error: 'Anime not found in database' });
+    }
+    
+    res.json({ success: true, data: anime });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 4b. Update entire anime (category, servers, etc.)
+app.put('/api/anime/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { category, servers } = req.body;
+    
+    const updateData = { updatedAt: new Date() };
+    if (category) updateData.category = category;
+    if (servers) updateData.servers = servers;
+    
+    const anime = await Anime.findByIdAndUpdate(
+      id,
+      updateData,
       { new: true }
     );
     
