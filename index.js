@@ -13,7 +13,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static('admin'));
 
 // ==================== MONGODB CONNECTION ====================
 const uri = "mongodb+srv://mflixph:XaneKath1@cluster0.vmagfpx.mongodb.net/?appName=Cluster0";
