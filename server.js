@@ -2,12 +2,14 @@ const express = require('express');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public')); // Serve static files from public folder
 
 // MongoDB Connection
 const uri = "mongodb+srv://mflixph:XaneKath1@mflixph.wngbqmu.mongodb.net/?appName=mflixph";
@@ -227,7 +229,8 @@ app.get('/public/watch/:id', async (req, res) => {
       }
       serversByEpisode[server.episode].push({
         name: server.name,
-        url: server.url
+        url: server.url,
+        quality: server.quality || 'HD'
       });
     });
     
@@ -273,7 +276,8 @@ app.get('/public/watch/:id/episode/:episode', async (req, res) => {
       totalEpisodes: content.episodes,
       servers: servers.map(s => ({
         name: s.name,
-        url: s.url
+        url: s.url,
+        quality: s.quality || 'HD'
       }))
     });
   } catch (error) {
@@ -679,7 +683,7 @@ app.delete('/api/content/:id', async (req, res) => {
 // Add or update server link
 app.post('/api/content/:id/servers', async (req, res) => {
   try {
-    const { serverName, url, episode = 1 } = req.body;
+    const { serverName, url, episode = 1, quality = 'HD' } = req.body;
 
     if (!['server1', 'server2'].includes(serverName)) {
       return res.status(400).json({ 
@@ -700,8 +704,9 @@ app.post('/api/content/:id/servers', async (req, res) => {
 
     if (existingServerIndex !== -1) {
       content.servers[existingServerIndex].url = url;
+      content.servers[existingServerIndex].quality = quality;
     } else {
-      content.servers.push({ name: serverName, url, episode });
+      content.servers.push({ name: serverName, url, episode, quality });
     }
 
     content.updatedAt = Date.now();
@@ -743,11 +748,13 @@ app.post('/api/content/:id/servers/bulk', async (req, res) => {
 
       if (existingIndex !== -1) {
         content.servers[existingIndex].url = server.url;
+        content.servers[existingIndex].quality = server.quality || 'HD';
       } else {
         content.servers.push({ 
           name: server.serverName, 
           url: server.url, 
-          episode: server.episode
+          episode: server.episode,
+          quality: server.quality || 'HD'
         });
       }
     });
@@ -844,7 +851,7 @@ app.get('/health', (req, res) => {
 });
 
 // API Documentation
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
   res.json({
     name: 'MFlix API',
     version: '1.0.0',
@@ -869,6 +876,11 @@ app.get('/', (req, res) => {
       }
     }
   });
+});
+
+// Serve admin panel at root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Start server
