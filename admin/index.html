@@ -11,6 +11,18 @@
         * { font-family: 'Roboto', sans-serif; }
         .dark { color-scheme: dark; }
         .material-icons { vertical-align: middle; }
+        .line-clamp-2 { 
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .line-clamp-1 { 
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
@@ -93,14 +105,33 @@
                             class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
                         >
                         <button 
+                            id="searchBtn"
                             onclick="searchAniList()" 
-                            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition"
+                            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <span class="material-icons">search</span>
-                            Search
+                            <span class="hidden sm:inline">Search</span>
                         </button>
                     </div>
-                    <div id="searchResults" class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                    
+                    <!-- Loading Indicator -->
+                    <div id="searchLoading" class="hidden mt-4 text-center">
+                        <div class="inline-block">
+                            <span class="material-icons animate-spin text-4xl text-blue-600">refresh</span>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">Searching AniList...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Error Message -->
+                    <div id="searchError" class="hidden mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <div class="flex items-center gap-2 text-red-800 dark:text-red-300">
+                            <span class="material-icons">error</span>
+                            <span id="searchErrorMessage">Error searching anime</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Search Results -->
+                    <div id="searchResults" class="mt-4"></div>
                 </div>
 
                 <!-- Add Form (hidden initially) -->
@@ -179,7 +210,8 @@
                         <div class="flex gap-3">
                             <button 
                                 onclick="addAnime()" 
-                                class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 transition"
+                                id="addAnimeBtn"
+                                class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <span class="material-icons">save</span>
                                 Add to Database
@@ -205,7 +237,8 @@
                 </h2>
                 <button 
                     onclick="loadAnimeList()" 
-                    class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    id="refreshBtn"
+                    class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition disabled:opacity-50"
                 >
                     <span class="material-icons text-gray-700 dark:text-gray-300">refresh</span>
                 </button>
@@ -215,7 +248,7 @@
     </main>
 
     <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-lg hidden transition-all transform">
+    <div id="toast" class="fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-lg hidden transition-all transform z-50">
         <div class="flex items-center gap-3">
             <span id="toastIcon" class="material-icons"></span>
             <span id="toastMessage" class="text-sm font-medium"></span>
@@ -223,7 +256,12 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:3000/api';
+        // API Configuration - Change this to your deployed API URL
+        const API_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000/api'
+            : `${window.location.origin}/api`;
+
+        console.log('API URL:', API_URL);
 
         // Theme Toggle
         const themeToggle = document.getElementById('themeToggle');
@@ -246,7 +284,7 @@
             const icon = document.getElementById('toastIcon');
             const msg = document.getElementById('toastMessage');
             
-            toast.className = 'fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-lg transition-all transform';
+            toast.className = 'fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-lg transition-all transform z-50';
             
             if (type === 'success') {
                 toast.classList.add('bg-green-600', 'text-white');
@@ -264,88 +302,143 @@
             }, 3000);
         }
 
+        // Show/Hide elements
+        function showElement(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function hideElement(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
         // Search AniList
         async function searchAniList() {
-            const query = document.getElementById('searchInput').value;
-            if (!query) return;
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                showToast('Please enter a search term', 'error');
+                return;
+            }
 
             const resultsDiv = document.getElementById('searchResults');
-            resultsDiv.innerHTML = '<div class="col-span-full text-center py-4"><span class="material-icons animate-spin text-4xl text-blue-600">refresh</span></div>';
+            const searchBtn = document.getElementById('searchBtn');
+            
+            // Show loading, hide error
+            showElement('searchLoading');
+            hideElement('searchError');
+            resultsDiv.innerHTML = '';
+            searchBtn.disabled = true;
 
             try {
-                const response = await fetch(`${API_URL}/search?query=${encodeURIComponent(query)}`);
+                console.log('Searching for:', query);
+                const response = await fetch(`${API_URL}/search?query=${encodeURIComponent(query)}&perPage=12`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('Search results:', data);
 
-                if (data.success && data.data.length > 0) {
-                    resultsDiv.innerHTML = data.data.map(anime => `
-                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition" onclick='selectAnime(${JSON.stringify(anime)})'>
-                            <img src="${anime.coverImage.large}" alt="${anime.title.romaji}" class="w-full h-48 object-cover">
-                            <div class="p-4">
-                                <h3 class="font-medium text-gray-900 dark:text-white mb-1 line-clamp-1">${anime.title.romaji}</h3>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">⭐ ${anime.averageScore || 'N/A'}/100</p>
-                                <div class="mt-2 flex flex-wrap gap-1">
-                                    ${anime.genres.slice(0, 2).map(g => `<span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">${g}</span>`).join('')}
+                hideElement('searchLoading');
+                searchBtn.disabled = false;
+
+                if (data.success && data.data && data.data.length > 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            ${data.data.map(anime => `
+                                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg hover:scale-105 transition-all" onclick='selectAnime(${JSON.stringify(anime).replace(/'/g, "&#39;")})'>
+                                    <img src="${anime.coverImage?.large || ''}" alt="${anime.title?.romaji || 'Unknown'}" class="w-full h-56 object-cover" onerror="this.src='https://via.placeholder.com/300x400?text=No+Image'">
+                                    <div class="p-3">
+                                        <h3 class="font-medium text-gray-900 dark:text-white mb-1 line-clamp-2 text-sm">${anime.title?.romaji || 'Unknown Title'}</h3>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400">⭐ ${anime.averageScore || 'N/A'}/100</p>
+                                        <div class="mt-2 flex flex-wrap gap-1">
+                                            ${(anime.genres || []).slice(0, 2).map(g => `<span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">${g}</span>`).join('')}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            `).join('')}
                         </div>
-                    `).join('');
+                    `;
                 } else {
-                    resultsDiv.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8">No results found</div>';
+                    resultsDiv.innerHTML = '<div class="text-center text-gray-500 py-8 bg-gray-50 dark:bg-gray-700 rounded-lg">No results found. Try another search term.</div>';
                 }
             } catch (error) {
+                console.error('Search error:', error);
+                hideElement('searchLoading');
+                searchBtn.disabled = false;
+                
+                document.getElementById('searchErrorMessage').textContent = 'Error searching anime. Please check your connection and try again.';
+                showElement('searchError');
                 showToast('Error searching anime', 'error');
-                resultsDiv.innerHTML = '';
             }
         }
 
         // Select Anime
         function selectAnime(anime) {
+            console.log('Selected anime:', anime);
             document.getElementById('selectedAnilistId').value = anime.anilistId;
-            document.getElementById('addForm').classList.remove('hidden');
+            showElement('addForm');
+            
             document.getElementById('selectedAnimeInfo').innerHTML = `
                 <div class="flex gap-4">
-                    <img src="${anime.coverImage.medium}" alt="${anime.title.romaji}" class="w-20 h-28 object-cover rounded">
+                    <img src="${anime.coverImage?.medium || anime.coverImage?.large || ''}" alt="${anime.title?.romaji || 'Unknown'}" class="w-20 h-28 object-cover rounded" onerror="this.src='https://via.placeholder.com/80x112?text=No+Image'">
                     <div>
-                        <h3 class="font-medium text-gray-900 dark:text-white mb-2">${anime.title.romaji}</h3>
+                        <h3 class="font-medium text-gray-900 dark:text-white mb-2">${anime.title?.romaji || 'Unknown Title'}</h3>
                         <p class="text-sm text-gray-600 dark:text-gray-400">Episodes: ${anime.episodes || 'Unknown'}</p>
                         <p class="text-sm text-gray-600 dark:text-gray-400">Score: ${anime.averageScore || 'N/A'}/100</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Status: ${anime.status || 'Unknown'}</p>
                     </div>
                 </div>
             `;
+            
+            // Clear search results and scroll to form
             document.getElementById('searchResults').innerHTML = '';
             document.getElementById('searchInput').value = '';
+            document.getElementById('addForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         // Cancel Add
         function cancelAdd() {
-            document.getElementById('addForm').classList.add('hidden');
+            hideElement('addForm');
             document.getElementById('server1Url').value = '';
             document.getElementById('server1Quality').value = '';
             document.getElementById('server2Url').value = '';
             document.getElementById('server2Quality').value = '';
+            document.getElementById('selectedAnilistId').value = '';
         }
 
         // Add Anime
         async function addAnime() {
             const anilistId = document.getElementById('selectedAnilistId').value;
             const category = document.getElementById('category').value;
-            const server1Url = document.getElementById('server1Url').value;
-            const server1Quality = document.getElementById('server1Quality').value;
-            const server2Url = document.getElementById('server2Url').value;
-            const server2Quality = document.getElementById('server2Quality').value;
+            const server1Url = document.getElementById('server1Url').value.trim();
+            const server1Quality = document.getElementById('server1Quality').value.trim();
+            const server2Url = document.getElementById('server2Url').value.trim();
+            const server2Quality = document.getElementById('server2Quality').value.trim();
+
+            if (!anilistId) {
+                showToast('Please select an anime first', 'error');
+                return;
+            }
 
             const servers = [];
-            if (server1Url) servers.push({ name: 'server1', url: server1Url, quality: server1Quality || 'HD' });
-            if (server2Url) servers.push({ name: 'server2', url: server2Url, quality: server2Quality || 'HD' });
+            if (server1Url) servers.push({ name: 'server1', url: server1Url, quality: server1Quality || 'HD', isActive: true });
+            if (server2Url) servers.push({ name: 'server2', url: server2Url, quality: server2Quality || 'HD', isActive: true });
+
+            const addBtn = document.getElementById('addAnimeBtn');
+            addBtn.disabled = true;
+            addBtn.innerHTML = '<span class="material-icons animate-spin">refresh</span> Adding...';
 
             try {
+                console.log('Adding anime:', { anilistId, category, servers });
                 const response = await fetch(`${API_URL}/anime`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ anilistId, category, servers })
+                    body: JSON.stringify({ anilistId: parseInt(anilistId), category, servers })
                 });
 
                 const data = await response.json();
+                console.log('Add response:', data);
 
                 if (data.success) {
                     showToast('Anime added successfully!');
@@ -356,47 +449,66 @@
                     showToast(data.error || 'Failed to add anime', 'error');
                 }
             } catch (error) {
-                showToast('Error adding anime', 'error');
+                console.error('Add error:', error);
+                showToast('Error adding anime. Please try again.', 'error');
+            } finally {
+                addBtn.disabled = false;
+                addBtn.innerHTML = '<span class="material-icons">save</span> Add to Database';
             }
         }
 
         // Load Anime List
         async function loadAnimeList() {
             const listDiv = document.getElementById('animeList');
-            listDiv.innerHTML = '<div class="text-center py-8"><span class="material-icons animate-spin text-4xl text-blue-600">refresh</span></div>';
+            const refreshBtn = document.getElementById('refreshBtn');
+            
+            listDiv.innerHTML = '<div class="text-center py-8"><span class="material-icons animate-spin text-4xl text-blue-600">refresh</span><p class="text-gray-600 dark:text-gray-400 mt-2">Loading anime...</p></div>';
+            refreshBtn.disabled = true;
 
             try {
-                const response = await fetch(`${API_URL}/anime?limit=50`);
+                console.log('Loading anime list...');
+                const response = await fetch(`${API_URL}/anime?limit=100`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('Anime list:', data);
 
-                if (data.success && data.data.length > 0) {
+                refreshBtn.disabled = false;
+
+                if (data.success && data.data && data.data.length > 0) {
                     listDiv.innerHTML = `
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                             ${data.data.map(anime => `
-                                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
-                                    <img src="${anime.coverImage.large}" alt="${anime.title.romaji}" class="w-full h-48 object-cover">
-                                    <div class="p-4">
-                                        <h3 class="font-medium text-gray-900 dark:text-white mb-2 line-clamp-2">${anime.title.romaji}</h3>
-                                        <div class="flex items-center gap-2 mb-2">
+                                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition">
+                                    <img src="${anime.coverImage?.large || ''}" alt="${anime.title?.romaji || 'Unknown'}" class="w-full h-56 object-cover" onerror="this.src='https://via.placeholder.com/300x400?text=No+Image'">
+                                    <div class="p-3">
+                                        <h3 class="font-medium text-gray-900 dark:text-white mb-2 line-clamp-2 text-sm">${anime.title?.romaji || 'Unknown Title'}</h3>
+                                        <div class="flex items-center gap-2 mb-2 flex-wrap">
                                             <span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">${anime.category}</span>
-                                            <span class="text-sm text-gray-600 dark:text-gray-400">⭐ ${anime.averageScore || 'N/A'}</span>
+                                            <span class="text-xs text-gray-600 dark:text-gray-400">⭐ ${anime.averageScore || 'N/A'}</span>
                                         </div>
-                                        <div class="flex gap-2">
-                                            <button onclick="deleteAnime('${anime._id}')" class="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition flex items-center justify-center gap-1">
-                                                <span class="material-icons text-sm">delete</span>
-                                                Delete
-                                            </button>
+                                        <div class="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                                            Servers: ${anime.servers?.length || 0}
                                         </div>
+                                        <button onclick="deleteAnime('${anime._id}')" class="w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition flex items-center justify-center gap-1">
+                                            <span class="material-icons text-sm">delete</span>
+                                            Delete
+                                        </button>
                                     </div>
                                 </div>
                             `).join('')}
                         </div>
                     `;
                 } else {
-                    listDiv.innerHTML = '<div class="text-center text-gray-500 py-8">No anime in database</div>';
+                    listDiv.innerHTML = '<div class="text-center text-gray-500 py-8 bg-gray-50 dark:bg-gray-700 rounded-lg">No anime in database. Add some anime to get started!</div>';
                 }
             } catch (error) {
-                listDiv.innerHTML = '<div class="text-center text-red-500 py-8">Error loading anime</div>';
+                console.error('Load error:', error);
+                listDiv.innerHTML = '<div class="text-center text-red-500 py-8 bg-red-50 dark:bg-red-900/20 rounded-lg">Error loading anime. Please refresh the page.</div>';
+                refreshBtn.disabled = false;
             }
         }
 
@@ -405,6 +517,7 @@
             if (!confirm('Are you sure you want to delete this anime?')) return;
 
             try {
+                console.log('Deleting anime:', id);
                 const response = await fetch(`${API_URL}/anime/${id}`, { method: 'DELETE' });
                 const data = await response.json();
 
@@ -416,6 +529,7 @@
                     showToast('Failed to delete anime', 'error');
                 }
             } catch (error) {
+                console.error('Delete error:', error);
                 showToast('Error deleting anime', 'error');
             }
         }
@@ -423,10 +537,11 @@
         // Load Stats
         async function loadStats() {
             try {
+                console.log('Loading stats...');
                 const response = await fetch(`${API_URL}/anime?limit=1000`);
                 const data = await response.json();
 
-                if (data.success) {
+                if (data.success && data.data) {
                     const anime = data.data;
                     document.getElementById('totalAnime').textContent = anime.length;
                     document.getElementById('popularCount').textContent = anime.filter(a => a.category === 'POPULAR').length;
@@ -434,18 +549,28 @@
                     document.getElementById('topRatedCount').textContent = anime.filter(a => a.category === 'TOP_RATED').length;
                 }
             } catch (error) {
-                console.error('Error loading stats:', error);
+                console.error('Stats error:', error);
             }
         }
 
         // Enter key for search
         document.getElementById('searchInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') searchAniList();
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchAniList();
+            }
         });
 
         // Initial Load
+        console.log('Initializing dashboard...');
         loadAnimeList();
         loadStats();
+        
+        // Log API health
+        fetch(`${API_URL}/health`)
+            .then(r => r.json())
+            .then(d => console.log('API Health:', d))
+            .catch(e => console.error('API Health Check Failed:', e));
     </script>
 </body>
 </html>
