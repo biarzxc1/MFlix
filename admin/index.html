@@ -161,49 +161,23 @@
                             </select>
                         </div>
 
+                        <!-- Episodes Manager -->
                         <div class="space-y-3">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Streaming Servers
-                            </label>
-                            
-                            <!-- Server 1 -->
-                            <div class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <span class="material-icons text-blue-600">play_circle</span>
-                                    <h4 class="font-medium text-gray-900 dark:text-white">Server 1</h4>
-                                </div>
-                                <input 
-                                    type="url" 
-                                    id="server1Url" 
-                                    placeholder="https://example.com/video.mp4"
-                                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none mb-2"
+                            <div class="flex items-center justify-between">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Episodes & Streaming Links
+                                </label>
+                                <button 
+                                    onclick="addEpisode()" 
+                                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center gap-1 transition"
                                 >
-                                <input 
-                                    type="text" 
-                                    id="server1Quality" 
-                                    placeholder="Quality (e.g., 1080p, 720p)"
-                                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
-                                >
+                                    <span class="material-icons text-sm">add</span>
+                                    Add Episode
+                                </button>
                             </div>
-
-                            <!-- Server 2 -->
-                            <div class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <span class="material-icons text-green-600">play_circle</span>
-                                    <h4 class="font-medium text-gray-900 dark:text-white">Server 2</h4>
-                                </div>
-                                <input 
-                                    type="url" 
-                                    id="server2Url" 
-                                    placeholder="https://example.com/video.mp4"
-                                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none mb-2"
-                                >
-                                <input 
-                                    type="text" 
-                                    id="server2Quality" 
-                                    placeholder="Quality (e.g., 1080p, 720p)"
-                                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
-                                >
+                            
+                            <div id="episodesContainer" class="space-y-3 max-h-96 overflow-y-auto">
+                                <!-- Episodes will be added here dynamically -->
                             </div>
                         </div>
 
@@ -249,8 +223,8 @@
 
     <!-- Edit Modal -->
     <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800">
+        <div class="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
                 <h2 class="text-xl font-medium text-gray-900 dark:text-white flex items-center gap-2">
                     <span class="material-icons">edit</span>
                     Edit Anime
@@ -282,50 +256,23 @@
                     </select>
                 </div>
 
-                <!-- Servers Section -->
+                <!-- Episodes Manager -->
                 <div class="space-y-3">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Streaming Servers
-                    </label>
-                    
-                    <!-- Server 1 -->
-                    <div class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
-                        <div class="flex items-center gap-2 mb-3">
-                            <span class="material-icons text-blue-600">play_circle</span>
-                            <h4 class="font-medium text-gray-900 dark:text-white">Server 1</h4>
-                        </div>
-                        <input 
-                            type="url" 
-                            id="editServer1Url" 
-                            placeholder="https://example.com/video.mp4"
-                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none mb-2"
+                    <div class="flex items-center justify-between">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Episodes & Streaming Links
+                        </label>
+                        <button 
+                            onclick="addEditEpisode()" 
+                            class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center gap-1 transition"
                         >
-                        <input 
-                            type="text" 
-                            id="editServer1Quality" 
-                            placeholder="Quality (e.g., 1080p, 720p)"
-                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
-                        >
+                            <span class="material-icons text-sm">add</span>
+                            Add Episode
+                        </button>
                     </div>
-
-                    <!-- Server 2 -->
-                    <div class="p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
-                        <div class="flex items-center gap-2 mb-3">
-                            <span class="material-icons text-green-600">play_circle</span>
-                            <h4 class="font-medium text-gray-900 dark:text-white">Server 2</h4>
-                        </div>
-                        <input 
-                            type="url" 
-                            id="editServer2Url" 
-                            placeholder="https://example.com/video.mp4"
-                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none mb-2"
-                        >
-                        <input 
-                            type="text" 
-                            id="editServer2Quality" 
-                            placeholder="Quality (e.g., 1080p, 720p)"
-                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
-                        >
+                    
+                    <div id="editEpisodesContainer" class="space-y-3 max-h-96 overflow-y-auto">
+                        <!-- Episodes will be loaded here -->
                     </div>
                 </div>
 
@@ -359,7 +306,7 @@
     </div>
 
     <script>
-        // API Configuration - Change this to your deployed API URL
+        // API Configuration
         const API_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000/api'
             : `${window.location.origin}/api`;
@@ -414,6 +361,183 @@
             document.getElementById(id).classList.add('hidden');
         }
 
+        // Episode counter for unique IDs
+        let episodeCounter = 0;
+
+        // Add Episode (for new anime)
+        function addEpisode() {
+            const container = document.getElementById('episodesContainer');
+            const episodeNum = container.children.length + 1;
+            const id = ++episodeCounter;
+            
+            const episodeDiv = document.createElement('div');
+            episodeDiv.className = 'p-4 border border-gray-300 dark:border-gray-600 rounded-lg';
+            episodeDiv.innerHTML = `
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="font-medium text-gray-900 dark:text-white">Episode ${episodeNum}</h4>
+                    <button onclick="removeEpisode(this)" class="text-red-600 hover:text-red-700">
+                        <span class="material-icons text-sm">delete</span>
+                    </button>
+                </div>
+                <div class="space-y-2">
+                    <input 
+                        type="number" 
+                        placeholder="Episode Number" 
+                        value="${episodeNum}"
+                        class="episode-number w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                    >
+                    <div class="space-y-1">
+                        <label class="text-xs text-gray-600 dark:text-gray-400">Server 1 (Direct URL or Iframe Embed)</label>
+                        <textarea 
+                            placeholder="Direct URL: https://example.com/video.mp4&#10;OR Iframe: <iframe src='...'></iframe>"
+                            class="server1-url w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none resize-none"
+                            rows="2"
+                        ></textarea>
+                    </div>
+                    <input 
+                        type="text" 
+                        placeholder="Server 1 Quality (e.g., 1080p)"
+                        class="server1-quality w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                    >
+                    <div class="space-y-1">
+                        <label class="text-xs text-gray-600 dark:text-gray-400">Server 2 (Direct URL or Iframe Embed)</label>
+                        <textarea 
+                            placeholder="Direct URL: https://example.com/video.mp4&#10;OR Iframe: <iframe src='...'></iframe>"
+                            class="server2-url w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none resize-none"
+                            rows="2"
+                        ></textarea>
+                    </div>
+                    <input 
+                        type="text" 
+                        placeholder="Server 2 Quality (e.g., 720p)"
+                        class="server2-quality w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                    >
+                </div>
+            `;
+            
+            container.appendChild(episodeDiv);
+        }
+
+        // Add Episode (for edit modal)
+        function addEditEpisode() {
+            const container = document.getElementById('editEpisodesContainer');
+            const episodeNum = container.children.length + 1;
+            
+            const episodeDiv = document.createElement('div');
+            episodeDiv.className = 'p-4 border border-gray-300 dark:border-gray-600 rounded-lg';
+            episodeDiv.innerHTML = `
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="font-medium text-gray-900 dark:text-white">Episode ${episodeNum}</h4>
+                    <button onclick="removeEpisode(this)" class="text-red-600 hover:text-red-700">
+                        <span class="material-icons text-sm">delete</span>
+                    </button>
+                </div>
+                <div class="space-y-2">
+                    <input 
+                        type="number" 
+                        placeholder="Episode Number" 
+                        value="${episodeNum}"
+                        class="episode-number w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                    >
+                    <input 
+                        type="url" 
+                        placeholder="Server 1 URL"
+                        class="server1-url w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                    >
+                    <input 
+                        type="text" 
+                        placeholder="Server 1 Quality (e.g., 1080p)"
+                        class="server1-quality w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                    >
+                    <input 
+                        type="url" 
+                        placeholder="Server 2 URL"
+                        class="server2-url w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                    >
+                    <input 
+                        type="text" 
+                        placeholder="Server 2 Quality (e.g., 720p)"
+                        class="server2-quality w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                    >
+                </div>
+            `;
+            
+            container.appendChild(episodeDiv);
+        }
+
+        // Remove Episode
+        function removeEpisode(button) {
+            button.closest('.p-4').remove();
+        }
+
+        // Get Episodes Data from Container
+        function getEpisodesData(containerId) {
+            const container = document.getElementById(containerId);
+            const episodeDivs = container.querySelectorAll('.p-4');
+            const episodes = [];
+            
+            episodeDivs.forEach(div => {
+                const episodeNum = div.querySelector('.episode-number').value;
+                const server1Input = div.querySelector('.server1-url').value.trim();
+                const server1Quality = div.querySelector('.server1-quality').value.trim();
+                const server2Input = div.querySelector('.server2-url').value.trim();
+                const server2Quality = div.querySelector('.server2-quality').value.trim();
+                
+                if (episodeNum && (server1Input || server2Input)) {
+                    const servers = [];
+                    
+                    // Process Server 1
+                    if (server1Input) {
+                        const server1 = extractEmbedUrl(server1Input);
+                        servers.push({
+                            name: 'server1',
+                            url: server1.url,
+                            quality: server1Quality || 'HD',
+                            isActive: true,
+                            type: server1.type
+                        });
+                    }
+                    
+                    // Process Server 2
+                    if (server2Input) {
+                        const server2 = extractEmbedUrl(server2Input);
+                        servers.push({
+                            name: 'server2',
+                            url: server2.url,
+                            quality: server2Quality || 'HD',
+                            isActive: true,
+                            type: server2.type
+                        });
+                    }
+                    
+                    episodes.push({
+                        episodeNumber: parseInt(episodeNum),
+                        servers: servers
+                    });
+                }
+            });
+            
+            return episodes;
+        }
+
+        // Extract embed URL from iframe or return direct URL
+        function extractEmbedUrl(input) {
+            if (!input) return { url: '', type: 'direct' };
+            
+            const trimmed = input.trim();
+            
+            // Check if it's an iframe tag
+            const iframeMatch = trimmed.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+            
+            if (iframeMatch) {
+                // Extract URL from iframe
+                return { url: iframeMatch[1], type: 'embed' };
+            }
+            
+            // If it's a direct URL
+            return { url: trimmed, type: 'direct' };
+        }
+
         // Search AniList
         async function searchAniList() {
             const query = document.getElementById('searchInput').value.trim();
@@ -425,7 +549,6 @@
             const resultsDiv = document.getElementById('searchResults');
             const searchBtn = document.getElementById('searchBtn');
             
-            // Show loading, hide error
             showElement('searchLoading');
             hideElement('searchError');
             resultsDiv.innerHTML = '';
@@ -454,6 +577,7 @@
                                     <div class="p-3">
                                         <h3 class="font-medium text-gray-900 dark:text-white mb-1 line-clamp-2 text-sm">${anime.title?.romaji || 'Unknown Title'}</h3>
                                         <p class="text-xs text-gray-600 dark:text-gray-400">⭐ ${anime.averageScore || 'N/A'}/100</p>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400">Episodes: ${anime.episodes || '?'}</p>
                                         <div class="mt-2 flex flex-wrap gap-1">
                                             ${(anime.genres || []).slice(0, 2).map(g => `<span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">${g}</span>`).join('')}
                                         </div>
@@ -494,6 +618,15 @@
                 </div>
             `;
             
+            // Clear and prepare episodes container
+            const episodesContainer = document.getElementById('episodesContainer');
+            episodesContainer.innerHTML = '';
+            
+            // Auto-add 3 episodes to start with
+            for (let i = 0; i < 3; i++) {
+                addEpisode();
+            }
+            
             // Clear search results and scroll to form
             document.getElementById('searchResults').innerHTML = '';
             document.getElementById('searchInput').value = '';
@@ -503,10 +636,7 @@
         // Cancel Add
         function cancelAdd() {
             hideElement('addForm');
-            document.getElementById('server1Url').value = '';
-            document.getElementById('server1Quality').value = '';
-            document.getElementById('server2Url').value = '';
-            document.getElementById('server2Quality').value = '';
+            document.getElementById('episodesContainer').innerHTML = '';
             document.getElementById('selectedAnilistId').value = '';
         }
 
@@ -514,30 +644,32 @@
         async function addAnime() {
             const anilistId = document.getElementById('selectedAnilistId').value;
             const category = document.getElementById('category').value;
-            const server1Url = document.getElementById('server1Url').value.trim();
-            const server1Quality = document.getElementById('server1Quality').value.trim();
-            const server2Url = document.getElementById('server2Url').value.trim();
-            const server2Quality = document.getElementById('server2Quality').value.trim();
+            const episodes = getEpisodesData('episodesContainer');
 
             if (!anilistId) {
                 showToast('Please select an anime first', 'error');
                 return;
             }
 
-            const servers = [];
-            if (server1Url) servers.push({ name: 'server1', url: server1Url, quality: server1Quality || 'HD', isActive: true });
-            if (server2Url) servers.push({ name: 'server2', url: server2Url, quality: server2Quality || 'HD', isActive: true });
+            if (episodes.length === 0) {
+                showToast('Please add at least one episode with streaming links', 'error');
+                return;
+            }
 
             const addBtn = document.getElementById('addAnimeBtn');
             addBtn.disabled = true;
             addBtn.innerHTML = '<span class="material-icons animate-spin">refresh</span> Adding...';
 
             try {
-                console.log('Adding anime:', { anilistId, category, servers });
+                console.log('Adding anime:', { anilistId, category, episodes });
                 const response = await fetch(`${API_URL}/anime`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ anilistId: parseInt(anilistId), category, servers })
+                    body: JSON.stringify({ 
+                        anilistId: parseInt(anilistId), 
+                        category, 
+                        episodes 
+                    })
                 });
 
                 const data = await response.json();
@@ -594,7 +726,7 @@
                                             <span class="text-xs text-gray-600 dark:text-gray-400">⭐ ${anime.averageScore || 'N/A'}</span>
                                         </div>
                                         <div class="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                                            Servers: ${anime.servers?.length || 0}
+                                            Episodes: ${anime.episodes?.length || 0}
                                         </div>
                                         <div class="flex gap-2">
                                             <button onclick='editAnime(${JSON.stringify(anime).replace(/'/g, "&#39;")})' class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition flex items-center justify-center gap-1">
@@ -656,7 +788,7 @@
                     <img src="${anime.coverImage?.medium || anime.coverImage?.large || ''}" alt="${anime.title?.romaji || 'Unknown'}" class="w-20 h-28 object-cover rounded" onerror="this.src='https://via.placeholder.com/80x112?text=No+Image'">
                     <div>
                         <h3 class="font-medium text-gray-900 dark:text-white mb-2">${anime.title?.romaji || 'Unknown Title'}</h3>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Episodes: ${anime.episodes || 'Unknown'}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Total Episodes: ${anime.episodes?.length || 0}</p>
                         <p class="text-sm text-gray-600 dark:text-gray-400">Score: ${anime.averageScore || 'N/A'}/100</p>
                         <p class="text-sm text-gray-600 dark:text-gray-400">Status: ${anime.status || 'Unknown'}</p>
                     </div>
@@ -666,14 +798,75 @@
             // Set category
             document.getElementById('editCategory').value = anime.category || 'NEWEST';
             
-            // Set servers
-            const server1 = anime.servers?.find(s => s.name === 'server1') || {};
-            const server2 = anime.servers?.find(s => s.name === 'server2') || {};
+            // Load episodes
+            const editContainer = document.getElementById('editEpisodesContainer');
+            editContainer.innerHTML = '';
             
-            document.getElementById('editServer1Url').value = server1.url || '';
-            document.getElementById('editServer1Quality').value = server1.quality || '';
-            document.getElementById('editServer2Url').value = server2.url || '';
-            document.getElementById('editServer2Quality').value = server2.quality || '';
+            if (anime.episodes && anime.episodes.length > 0) {
+                anime.episodes.forEach((episode, index) => {
+                    const server1 = episode.servers?.find(s => s.name === 'server1') || {};
+                    const server2 = episode.servers?.find(s => s.name === 'server2') || {};
+                    
+                    const episodeDiv = document.createElement('div');
+                    episodeDiv.className = 'p-4 border border-gray-300 dark:border-gray-600 rounded-lg';
+                    episodeDiv.innerHTML = `
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-medium text-gray-900 dark:text-white">Episode ${episode.episodeNumber}</h4>
+                            <button onclick="removeEpisode(this)" class="text-red-600 hover:text-red-700">
+                                <span class="material-icons text-sm">delete</span>
+                            </button>
+                        </div>
+                        <div class="space-y-2">
+                            <input 
+                                type="number" 
+                                placeholder="Episode Number" 
+                                value="${episode.episodeNumber}"
+                                class="episode-number w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                            >
+                            <div class="space-y-1">
+                                <label class="text-xs text-gray-600 dark:text-gray-400">Server 1 (Direct URL or Iframe Embed)</label>
+                                <textarea 
+                                    placeholder="Direct URL or Iframe embed"
+                                    class="server1-url w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none resize-none"
+                                    rows="2"
+                                >${server1.url || ''}</textarea>
+                                <div class="text-xs ${server1.type === 'embed' ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}">
+                                    ${server1.type === 'embed' ? '✓ Embed detected' : server1.url ? '✓ Direct URL' : ''}
+                                </div>
+                            </div>
+                            <input 
+                                type="text" 
+                                placeholder="Server 1 Quality (e.g., 1080p)"
+                                value="${server1.quality || ''}"
+                                class="server1-quality w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                            >
+                            <div class="space-y-1">
+                                <label class="text-xs text-gray-600 dark:text-gray-400">Server 2 (Direct URL or Iframe Embed)</label>
+                                <textarea 
+                                    placeholder="Direct URL or Iframe embed"
+                                    class="server2-url w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none resize-none"
+                                    rows="2"
+                                >${server2.url || ''}</textarea>
+                                <div class="text-xs ${server2.type === 'embed' ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}">
+                                    ${server2.type === 'embed' ? '✓ Embed detected' : server2.url ? '✓ Direct URL' : ''}
+                                </div>
+                            </div>
+                            <input 
+                                type="text" 
+                                placeholder="Server 2 Quality (e.g., 720p)"
+                                value="${server2.quality || ''}"
+                                class="server2-quality w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none"
+                            >
+                        </div>
+                    `;
+                    editContainer.appendChild(episodeDiv);
+                });
+            } else {
+                // If no episodes, add 3 empty ones
+                for (let i = 0; i < 3; i++) {
+                    addEditEpisode();
+                }
+            }
             
             // Show modal
             showElement('editModal');
@@ -690,25 +883,23 @@
         async function updateAnime() {
             const id = document.getElementById('editAnimeId').value;
             const category = document.getElementById('editCategory').value;
-            const server1Url = document.getElementById('editServer1Url').value.trim();
-            const server1Quality = document.getElementById('editServer1Quality').value.trim();
-            const server2Url = document.getElementById('editServer2Url').value.trim();
-            const server2Quality = document.getElementById('editServer2Quality').value.trim();
+            const episodes = getEpisodesData('editEpisodesContainer');
 
-            const servers = [];
-            if (server1Url) servers.push({ name: 'server1', url: server1Url, quality: server1Quality || 'HD', isActive: true });
-            if (server2Url) servers.push({ name: 'server2', url: server2Url, quality: server2Quality || 'HD', isActive: true });
+            if (episodes.length === 0) {
+                showToast('Please add at least one episode with streaming links', 'error');
+                return;
+            }
 
             const updateBtn = document.getElementById('updateAnimeBtn');
             updateBtn.disabled = true;
             updateBtn.innerHTML = '<span class="material-icons animate-spin">refresh</span> Saving...';
 
             try {
-                console.log('Updating anime:', { id, category, servers });
+                console.log('Updating anime:', { id, category, episodes });
                 const response = await fetch(`${API_URL}/anime/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ category, servers })
+                    body: JSON.stringify({ category, episodes })
                 });
 
                 const data = await response.json();
