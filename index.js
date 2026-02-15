@@ -1,4 +1,4 @@
-// index.js - MFlix API Server
+// server.js - MFlix API Server
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -13,7 +13,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-app.use(express.static('admin'));
+app.use(express.static('public')); // Serve static files from 'public' directory
 
 // ==================== MONGODB CONNECTION ====================
 const uri = "mongodb+srv://mflixph:XaneKath1@cluster0.vmagfpx.mongodb.net/?appName=Cluster0";
@@ -277,67 +277,41 @@ app.get('/', (req, res) => {
     <body>
       <h1>🎬 MFlix API</h1>
       <p>Welcome to the MFlix Anime Streaming API!</p>
-      <a href="/admin/index.html" class="link">📊 Go to Admin Dashboard</a>
+      <a href="/index.html" class="link">📊 Go to Admin Dashboard</a>
       <a href="/api/health" class="link">🏥 API Health Check</a>
       <h3>API Endpoints:</h3>
       <ul>
-        <li>GET /api/search?query=naruto - Search anime</li>
-        <li>GET /api/anime - Get all anime</li>
-        <li>GET /api/anime/:id - Get single anime</li>
-        <li>POST /api/anime - Add anime</li>
-        <li>PUT /api/anime/:id/servers - Update servers</li>
-        <li>DELETE /api/anime/:id - Delete anime</li>
+        <li><strong>GET</strong> /api/public/anime - Get all anime (paginated)</li>
+        <li><strong>GET</strong> /api/public/category/:category - Get anime by category</li>
+        <li><strong>GET</strong> /api/public/anime/:id - Get single anime</li>
+        <li><strong>GET</strong> /api/public/search?query=name - Search anime</li>
+        <li><strong>POST</strong> /api/anilist/search - Search AniList</li>
+        <li><strong>POST</strong> /api/anilist/upload - Upload anime from AniList</li>
       </ul>
     </body>
     </html>
   `);
 });
 
-// 1. Search anime from AniList
-app.get('/api/search', async (req, res) => {
+// 1. Search AniList
+app.post('/api/anilist/search', async (req, res) => {
   try {
-    const { query, page = 1, perPage = 20 } = req.query;
+    const { query, page = 1, perPage = 10 } = req.body;
     
     const gqlQuery = `
       query ($search: String, $page: Int, $perPage: Int) {
         Page(page: $page, perPage: $perPage) {
-          pageInfo {
-            total
-            currentPage
-            lastPage
-            hasNextPage
-          }
-          media(search: $search, type: ANIME, sort: POPULARITY_DESC) {
+          media(search: $search, type: ANIME) {
             id
-            title {
-              romaji
-              english
-              native
-            }
+            title { romaji english native }
             description
-            coverImage {
-              large
-              medium
-            }
+            coverImage { large medium }
             bannerImage
             genres
-            tags {
-              name
-            }
             episodes
-            duration
-            status
-            season
-            seasonYear
             averageScore
             popularity
-            trending
-            format
-            studios {
-              nodes {
-                name
-              }
-            }
+            status
           }
         }
       }
@@ -349,114 +323,14 @@ app.get('/api/search', async (req, res) => {
       perPage: parseInt(perPage) 
     });
     
-    const formattedData = data.Page.media.map(anime => ({
-      anilistId: anime.id,
-      title: anime.title,
-      description: anime.description,
-      coverImage: anime.coverImage,
-      bannerImage: anime.bannerImage,
-      genres: anime.genres,
-      tags: anime.tags?.map(t => t.name) || [],
-      episodes: anime.episodes,
-      duration: anime.duration,
-      status: anime.status,
-      season: anime.season,
-      seasonYear: anime.seasonYear,
-      averageScore: anime.averageScore,
-      popularity: anime.popularity,
-      trending: anime.trending,
-      format: anime.format,
-      studios: anime.studios?.nodes?.map(s => s.name) || []
-    }));
-    
-    res.json({
-      success: true,
-      pageInfo: data.Page.pageInfo,
-      data: formattedData
-    });
+    res.json({ success: true, data: data.Page.media });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 2. Get anime by AniList ID
-app.get('/api/anime/anilist/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const gqlQuery = `
-      query ($id: Int) {
-        Media(id: $id, type: ANIME) {
-          id
-          title {
-            romaji
-            english
-            native
-          }
-          description
-          coverImage {
-            large
-            medium
-          }
-          bannerImage
-          genres
-          tags {
-            name
-          }
-          episodes
-          duration
-          status
-          season
-          seasonYear
-          averageScore
-          popularity
-          trending
-          format
-          studios {
-            nodes {
-              name
-            }
-          }
-        }
-      }
-    `;
-    
-    const data = await fetchFromAniList(gqlQuery, { id: parseInt(id) });
-    
-    if (!data.Media) {
-      return res.status(404).json({ success: false, error: 'Anime not found on AniList' });
-    }
-    
-    const anime = data.Media;
-    res.json({
-      success: true,
-      data: {
-        anilistId: anime.id,
-        title: anime.title,
-        description: anime.description,
-        coverImage: anime.coverImage,
-        bannerImage: anime.bannerImage,
-        genres: anime.genres,
-        tags: anime.tags?.map(t => t.name) || [],
-        episodes: anime.episodes,
-        duration: anime.duration,
-        status: anime.status,
-        season: anime.season,
-        seasonYear: anime.seasonYear,
-        averageScore: anime.averageScore,
-        popularity: anime.popularity,
-        trending: anime.trending,
-        format: anime.format,
-        studios: anime.studios?.nodes?.map(s => s.name) || []
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// 3. Add anime to database
-app.post('/api/anime', async (req, res) => {
+// 2. Upload anime to database from AniList
+app.post('/api/anilist/upload', async (req, res) => {
   try {
     const { anilistId, category, episodes } = req.body;
     
@@ -737,7 +611,7 @@ app.listen(PORT, () => {
 ║       🎬 MFlix API Server Started      ║
 ╠════════════════════════════════════════╣
 ║  Port: ${PORT}                           ║
-║  Admin: http://localhost:${PORT}/admin/index.html
+║  Admin: http://localhost:${PORT}/index.html
 ║  API: http://localhost:${PORT}/api         ║
 ║  Health: http://localhost:${PORT}/api/health
 ╚════════════════════════════════════════╝
