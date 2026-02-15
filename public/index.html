@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MFlix Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        border: 'hsl(214.3 31.8% 91.4%)',
+                        input: 'hsl(214.3 31.8% 91.4%)',
+                        ring: 'hsl(222.2 84% 4.9%)',
+                        background: 'hsl(0 0% 100%)',
+                        foreground: 'hsl(222.2 84% 4.9%)',
+                        primary: {
+                            DEFAULT: 'hsl(222.2 47.4% 11.2%)',
+                            foreground: 'hsl(210 40% 98%)',
+                        },
+                        secondary: {
+                            DEFAULT: 'hsl(210 40% 96.1%)',
+                            foreground: 'hsl(222.2 47.4% 11.2%)',
+                        },
+                        destructive: {
+                            DEFAULT: 'hsl(0 84.2% 60.2%)',
+                            foreground: 'hsl(210 40% 98%)',
+                        },
+                        muted: {
+                            DEFAULT: 'hsl(210 40% 96.1%)',
+                            foreground: 'hsl(215.4 16.3% 46.9%)',
+                        },
+                        accent: {
+                            DEFAULT: 'hsl(210 40% 96.1%)',
+                            foreground: 'hsl(222.2 47.4% 11.2%)',
+                        },
+                        card: {
+                            DEFAULT: 'hsl(0 0% 100%)',
+                            foreground: 'hsl(222.2 84% 4.9%)',
+                        },
+                    },
+                    borderRadius: {
+                        lg: '0.5rem',
+                        md: 'calc(0.5rem - 2px)',
+                        sm: 'calc(0.5rem - 4px)',
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        .sidebar-active {
+            transform: translateX(0);
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans antialiased">
+    <!-- Mobile Menu Button -->
+    <button id="mobileMenuBtn" class="md:hidden fixed top-4 left-4 z-50 bg-white rounded-lg shadow-lg p-2 hover:bg-gray-50 transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+    </button>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar fixed left-0 top-0 h-screen w-64 bg-white border-r border-border z-40 transition-transform duration-300 ease-in-out">
+        <div class="flex flex-col h-full">
+            <!-- Logo -->
+            <div class="p-6 border-b border-border">
+                <h1 class="text-2xl font-bold text-primary">🎬 MFlix</h1>
+                <p class="text-sm text-muted-foreground mt-1">Admin Panel</p>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 p-4 overflow-y-auto">
+                <button onclick="showView('dashboard')" class="nav-item w-full text-left px-4 py-2.5 rounded-md hover:bg-accent transition-colors mb-1 flex items-center gap-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                    </svg>
+                    Dashboard
+                </button>
+                <button onclick="showView('anime')" class="nav-item w-full text-left px-4 py-2.5 rounded-md hover:bg-accent transition-colors mb-1 flex items-center gap-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path>
+                    </svg>
+                    All Anime
+                </button>
+                <button onclick="showView('search')" class="nav-item w-full text-left px-4 py-2.5 rounded-md hover:bg-accent transition-colors mb-1 flex items-center gap-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    Search & Add
+                </button>
+                <button onclick="showView('categories')" class="nav-item w-full text-left px-4 py-2.5 rounded-md hover:bg-accent transition-colors flex items-center gap-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                    </svg>
+                    Categories
+                </button>
+            </nav>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-border">
+                <div class="text-xs text-muted-foreground">
+                    <p>Version 1.0.0</p>
+                    <p class="mt-1">Connected: <span id="dbStatus" class="text-green-600 font-medium">●</span></p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="md:ml-64 min-h-screen p-4 md:p-8">
+        <!-- Dashboard View -->
+        <div id="dashboardView" class="view">
+            <div class="mb-6">
+                <h2 class="text-3xl font-bold text-primary">Dashboard</h2>
+                <p class="text-muted-foreground mt-1">Overview of your anime collection</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white rounded-lg border border-border p-6 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-muted-foreground">Total Anime</p>
+                            <p class="text-3xl font-bold mt-2" id="totalAnime">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg border border-border p-6 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-muted-foreground">Newest</p>
+                            <p class="text-3xl font-bold mt-2" id="newestCount">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg border border-border p-6 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-muted-foreground">Popular</p>
+                            <p class="text-3xl font-bold mt-2" id="popularCount">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg border border-border p-6 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-muted-foreground">Top Rated</p>
+                            <p class="text-3xl font-bold mt-2" id="topRatedCount">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Anime -->
+            <div class="bg-white rounded-lg border border-border p-6">
+                <h3 class="text-xl font-semibold mb-4">Recent Anime</h3>
+                <div id="recentAnimeList" class="space-y-3">
+                    <p class="text-muted-foreground text-center py-8">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Anime List View -->
+        <div id="animeView" class="view hidden">
+            <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-primary">All Anime</h2>
+                    <p class="text-muted-foreground mt-1">Manage your anime collection</p>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="animeSearchInput" placeholder="Search anime..." 
+                        class="px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring w-full md:w-64">
+                    <button onclick="searchAnimeList()" class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+                        Search
+                    </button>
+                </div>
+            </div>
+
+            <div id="animeListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <p class="text-muted-foreground text-center py-8 col-span-full">Loading...</p>
+            </div>
+
+            <!-- Pagination -->
+            <div id="animePagination" class="mt-6 flex justify-center gap-2"></div>
+        </div>
+
+        <!-- Search & Add View -->
+        <div id="searchView" class="view hidden">
+            <div class="mb-6">
+                <h2 class="text-3xl font-bold text-primary">Search & Add Anime</h2>
+                <p class="text-muted-foreground mt-1">Search AniList and add anime to your database</p>
+            </div>
+
+            <!-- Search Form -->
+            <div class="bg-white rounded-lg border border-border p-6 mb-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Search AniList</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="anilistSearchInput" placeholder="Enter anime name..." 
+                                class="flex-1 px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                            <button onclick="searchAnilist()" class="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+                                Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Results -->
+            <div id="anilistResults" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Categories View -->
+        <div id="categoriesView" class="view hidden">
+            <div class="mb-6">
+                <h2 class="text-3xl font-bold text-primary">Categories</h2>
+                <p class="text-muted-foreground mt-1">View anime by category</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <button onclick="loadCategoryAnime('NEWEST')" class="p-6 bg-white rounded-lg border border-border hover:shadow-md transition-all text-left">
+                    <div class="text-2xl mb-2">🆕</div>
+                    <h3 class="font-semibold text-lg">Newest</h3>
+                    <p class="text-muted-foreground text-sm mt-1">Latest additions</p>
+                </button>
+                <button onclick="loadCategoryAnime('POPULAR')" class="p-6 bg-white rounded-lg border border-border hover:shadow-md transition-all text-left">
+                    <div class="text-2xl mb-2">🔥</div>
+                    <h3 class="font-semibold text-lg">Popular</h3>
+                    <p class="text-muted-foreground text-sm mt-1">Most watched</p>
+                </button>
+                <button onclick="loadCategoryAnime('TOP_RATED')" class="p-6 bg-white rounded-lg border border-border hover:shadow-md transition-all text-left">
+                    <div class="text-2xl mb-2">⭐</div>
+                    <h3 class="font-semibold text-lg">Top Rated</h3>
+                    <p class="text-muted-foreground text-sm mt-1">Highest scores</p>
+                </button>
+                <button onclick="loadCategoryAnime('UPCOMING')" class="p-6 bg-white rounded-lg border border-border hover:shadow-md transition-all text-left">
+                    <div class="text-2xl mb-2">📅</div>
+                    <h3 class="font-semibold text-lg">Upcoming</h3>
+                    <p class="text-muted-foreground text-sm mt-1">Coming soon</p>
+                </button>
+            </div>
+
+            <div id="categoryAnimeList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+        </div>
+    </main>
+
+    <!-- Edit Anime Modal -->
+    <div id="editModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-border p-6 flex items-center justify-between">
+                <h3 class="text-2xl font-bold">Edit Anime</h3>
+                <button onclick="closeEditModal()" class="text-muted-foreground hover:text-foreground">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <div id="editModalContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Anime Modal -->
+    <div id="addModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-border p-6 flex items-center justify-between">
+                <h3 class="text-2xl font-bold">Add Anime to Database</h3>
+                <button onclick="closeAddModal()" class="text-muted-foreground hover:text-foreground">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <div id="addModalContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 flex flex-col items-center gap-4">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p class="text-lg font-medium">Loading...</p>
+        </div>
+    </div>
+
+    <script>
+        // API Base URL
+        const API_URL = window.location.origin;
+
+        // State
+        let currentView = 'dashboard';
+        let currentAnime = null;
+        let allAnime = [];
+        let currentPage = 1;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkHealth();
+            loadDashboard();
+            setupMobileMenu();
+            
+            // Add enter key listener for search inputs
+            document.getElementById('animeSearchInput')?.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchAnimeList();
+            });
+            document.getElementById('anilistSearchInput')?.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchAnilist();
+            });
+        });
+
+        // Mobile Menu
+        function setupMobileMenu() {
+            const btn = document.getElementById('mobileMenuBtn');
+            const sidebar = document.getElementById('sidebar');
+            
+            btn?.addEventListener('click', () => {
+                sidebar.classList.toggle('sidebar-active');
+            });
+
+            // Close sidebar when clicking nav items on mobile
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.remove('sidebar-active');
+                    }
+                });
+            });
+        }
+
+        // Health Check
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${API_URL}/api/health`);
+                const data = await res.json();
+                document.getElementById('dbStatus').textContent = data.mongodb === 'connected' ? '●' : '○';
+                document.getElementById('dbStatus').className = data.mongodb === 'connected' ? 'text-green-600 font-medium' : 'text-red-600 font-medium';
+            } catch (error) {
+                console.error('Health check failed:', error);
+                document.getElementById('dbStatus').textContent = '○';
+                document.getElementById('dbStatus').className = 'text-red-600 font-medium';
+            }
+        }
+
+        // View Management
+        function showView(view) {
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('bg-accent', 'font-medium'));
+            
+            currentView = view;
+            
+            const viewMap = {
+                'dashboard': 'dashboardView',
+                'anime': 'animeView',
+                'search': 'searchView',
+                'categories': 'categoriesView'
+            };
+            
+            document.getElementById(viewMap[view])?.classList.remove('hidden');
+            event.currentTarget?.classList.add('bg-accent', 'font-medium');
+            
+            if (view === 'dashboard') loadDashboard();
+            if (view === 'anime') loadAllAnime();
+        }
+
+        // Dashboard
+        async function loadDashboard() {
+            try {
+                const res = await fetch(`${API_URL}/api/anime?limit=1000`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    const anime = data.data;
+                    
+                    // Update stats
+                    document.getElementById('totalAnime').textContent = anime.length;
+                    document.getElementById('newestCount').textContent = anime.filter(a => a.category === 'NEWEST').length;
+                    document.getElementById('popularCount').textContent = anime.filter(a => a.category === 'POPULAR').length;
+                    document.getElementById('topRatedCount').textContent = anime.filter(a => a.category === 'TOP_RATED').length;
+                    
+                    // Recent anime
+                    const recent = anime.slice(0, 5);
+                    const recentHTML = recent.map(a => `
+                        <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-accent transition-colors">
+                            <img src="${a.coverImage?.medium || ''}" alt="${a.title?.english || a.title?.romaji}" 
+                                class="w-12 h-16 object-cover rounded">
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium truncate">${a.title?.english || a.title?.romaji}</p>
+                                <p class="text-sm text-muted-foreground">${a.category || 'N/A'} • ${a.episodes?.length || 0} episodes</p>
+                            </div>
+                            <button onclick="openEditModal('${a._id}')" 
+                                class="px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors">
+                                Edit
+                            </button>
+                        </div>
+                    `).join('');
+                    
+                    document.getElementById('recentAnimeList').innerHTML = recent.length ? recentHTML : '<p class="text-muted-foreground text-center py-8">No anime yet</p>';
+                }
+            } catch (error) {
+                console.error('Dashboard load failed:', error);
+                showNotification('Failed to load dashboard', 'error');
+            }
+        }
+
+        // Load All Anime
+        async function loadAllAnime(page = 1) {
+            showLoading();
+            try {
+                const res = await fetch(`${API_URL}/api/anime?page=${page}&limit=20`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    allAnime = data.data;
+                    currentPage = page;
+                    renderAnimeList(allAnime);
+                    renderPagination(data.pagination);
+                }
+            } catch (error) {
+                console.error('Load anime failed:', error);
+                showNotification('Failed to load anime', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Search Anime in List
+        async function searchAnimeList() {
+            const query = document.getElementById('animeSearchInput').value.trim();
+            
+            if (!query) {
+                loadAllAnime();
+                return;
+            }
+            
+            showLoading();
+            try {
+                const res = await fetch(`${API_URL}/api/public/search?query=${encodeURIComponent(query)}&limit=100`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    renderAnimeList(data.data);
+                    document.getElementById('animePagination').innerHTML = '';
+                } else {
+                    renderAnimeList([]);
+                    showNotification(data.error || 'No results found', 'info');
+                }
+            } catch (error) {
+                console.error('Search failed:', error);
+                showNotification('Search failed', 'error');
+                renderAnimeList([]);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Render Anime List
+        function renderAnimeList(anime) {
+            const container = document.getElementById('animeListContainer');
+            
+            if (!anime.length) {
+                container.innerHTML = '<p class="text-muted-foreground text-center py-8 col-span-full">No anime found</p>';
+                return;
+            }
+            
+            container.innerHTML = anime.map(a => `
+                <div class="bg-white rounded-lg border border-border overflow-hidden hover:shadow-lg transition-shadow">
+                    <img src="${a.coverImage?.large || a.coverImage?.medium || ''}" alt="${a.title?.english || a.title?.romaji}" 
+                        class="w-full h-64 object-cover">
+                    <div class="p-4">
+                        <h3 class="font-semibold text-lg mb-2 line-clamp-2">${a.title?.english || a.title?.romaji}</h3>
+                        <div class="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                            <span class="px-2 py-1 bg-secondary rounded text-xs">${a.category || 'N/A'}</span>
+                            <span>${a.episodes?.length || 0} EP</span>
+                            ${a.averageScore ? `<span>⭐ ${a.averageScore}%</span>` : ''}
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="openEditModal('${a._id}')" 
+                                class="flex-1 px-3 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm">
+                                Edit
+                            </button>
+                            <button onclick="deleteAnime('${a._id}')" 
+                                class="px-3 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors text-sm">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Pagination
+        function renderPagination(pagination) {
+            const container = document.getElementById('animePagination');
+            
+            if (!pagination || pagination.pages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            
+            // Previous button
+            if (pagination.page > 1) {
+                html += `<button onclick="loadAllAnime(${pagination.page - 1})" 
+                    class="px-4 py-2 bg-white border border-border rounded-md hover:bg-accent transition-colors">Previous</button>`;
+            }
+            
+            // Page numbers
+            for (let i = Math.max(1, pagination.page - 2); i <= Math.min(pagination.pages, pagination.page + 2); i++) {
+                html += `<button onclick="loadAllAnime(${i})" 
+                    class="px-4 py-2 ${i === pagination.page ? 'bg-primary text-primary-foreground' : 'bg-white border border-border'} rounded-md hover:bg-primary/90 transition-colors">
+                    ${i}
+                </button>`;
+            }
+            
+            // Next button
+            if (pagination.page < pagination.pages) {
+                html += `<button onclick="loadAllAnime(${pagination.page + 1})" 
+                    class="px-4 py-2 bg-white border border-border rounded-md hover:bg-accent transition-colors">Next</button>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Search AniList
+        async function searchAnilist() {
+            const query = document.getElementById('anilistSearchInput').value.trim();
+            
+            if (!query) {
+                showNotification('Please enter a search term', 'info');
+                return;
+            }
+            
+            showLoading();
+            try {
+                const res = await fetch(`${API_URL}/api/anilist/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, perPage: 20 })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success && data.data.length) {
+                    renderAnilistResults(data.data);
+                } else {
+                    document.getElementById('anilistResults').innerHTML = 
+                        '<p class="text-muted-foreground text-center py-8 col-span-full">No results found</p>';
+                }
+            } catch (error) {
+                console.error('AniList search failed:', error);
+                showNotification('Search failed', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Render AniList Results
+        function renderAnilistResults(results) {
+            const container = document.getElementById('anilistResults');
+            
+            container.innerHTML = results.map(anime => `
+                <div class="bg-white rounded-lg border border-border overflow-hidden hover:shadow-lg transition-shadow">
+                    <img src="${anime.coverImage?.large || anime.coverImage?.medium || ''}" alt="${anime.title?.english || anime.title?.romaji}" 
+                        class="w-full h-64 object-cover">
+                    <div class="p-4">
+                        <h3 class="font-semibold text-lg mb-2 line-clamp-2">${anime.title?.english || anime.title?.romaji}</h3>
+                        <div class="text-sm text-muted-foreground mb-3 line-clamp-3">${anime.description?.replace(/<[^>]*>/g, '') || 'No description'}</div>
+                        <div class="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                            ${anime.episodes ? `<span>${anime.episodes} EP</span>` : ''}
+                            ${anime.averageScore ? `<span>⭐ ${anime.averageScore}%</span>` : ''}
+                            <span>👥 ${anime.popularity || 0}</span>
+                        </div>
+                        <button onclick="openAddModal(${anime.id})" 
+                            class="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+                            Add to Database
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Open Add Modal
+        function openAddModal(anilistId) {
+            document.getElementById('addModal').classList.remove('hidden');
+            document.getElementById('addModal').classList.add('flex');
+            
+            const content = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Category</label>
+                        <select id="addCategory" class="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                            <option value="NEWEST">Newest</option>
+                            <option value="POPULAR">Popular</option>
+                            <option value="TOP_RATED">Top Rated</option>
+                            <option value="UPCOMING">Upcoming</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Number of Episodes (leave 0 for now)</label>
+                        <input type="number" id="addEpisodeCount" value="0" min="0" 
+                            class="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                    </div>
+                    <button onclick="addAnimeToDatabase(${anilistId})" 
+                        class="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+                        Add Anime
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('addModalContent').innerHTML = content;
+        }
+
+        // Close Add Modal
+        function closeAddModal() {
+            document.getElementById('addModal').classList.add('hidden');
+            document.getElementById('addModal').classList.remove('flex');
+        }
+
+        // Add Anime to Database
+        async function addAnimeToDatabase(anilistId) {
+            const category = document.getElementById('addCategory').value;
+            const episodeCount = parseInt(document.getElementById('addEpisodeCount').value) || 0;
+            
+            const episodes = [];
+            for (let i = 1; i <= episodeCount; i++) {
+                episodes.push({
+                    episodeNumber: i,
+                    servers: [
+                        { name: 'server1', url: '', isActive: true, type: 'direct' },
+                        { name: 'server2', url: '', isActive: true, type: 'direct' }
+                    ]
+                });
+            }
+            
+            showLoading();
+            try {
+                const res = await fetch(`${API_URL}/api/anilist/upload`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ anilistId, category, episodes })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    showNotification('Anime added successfully!', 'success');
+                    closeAddModal();
+                    if (currentView === 'anime') loadAllAnime();
+                    if (currentView === 'dashboard') loadDashboard();
+                } else {
+                    showNotification(data.error || 'Failed to add anime', 'error');
+                }
+            } catch (error) {
+                console.error('Add anime failed:', error);
+                showNotification('Failed to add anime', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Open Edit Modal
+        async function openEditModal(animeId) {
+            showLoading();
+            try {
+                const res = await fetch(`${API_URL}/api/anime/${animeId}`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    currentAnime = data.data;
+                    renderEditModal();
+                    document.getElementById('editModal').classList.remove('hidden');
+                    document.getElementById('editModal').classList.add('flex');
+                }
+            } catch (error) {
+                console.error('Load anime failed:', error);
+                showNotification('Failed to load anime', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Render Edit Modal
+        function renderEditModal() {
+            if (!currentAnime) return;
+            
+            const episodesHTML = (currentAnime.episodes || []).map((ep, idx) => `
+                <div class="border border-border rounded-lg p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-semibold">Episode ${ep.episodeNumber}</h4>
+                        <button onclick="removeEpisode(${idx})" class="text-destructive hover:text-destructive/80">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    ${(ep.servers || []).map((server, sIdx) => `
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium">${server.name}</label>
+                            <input type="text" value="${server.url || ''}" 
+                                onchange="updateServerUrl(${idx}, ${sIdx}, this.value)"
+                                placeholder="Enter video URL or iframe embed"
+                                class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-sm">
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+            
+            const content = `
+                <div class="space-y-6">
+                    <!-- Basic Info -->
+                    <div>
+                        <h4 class="font-semibold text-lg mb-4">Basic Information</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Title (English)</label>
+                                <input type="text" value="${currentAnime.title?.english || ''}" readonly
+                                    class="w-full px-4 py-2 border border-border rounded-md bg-muted">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Category</label>
+                                <select id="editCategory" class="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                                    <option value="NEWEST" ${currentAnime.category === 'NEWEST' ? 'selected' : ''}>Newest</option>
+                                    <option value="POPULAR" ${currentAnime.category === 'POPULAR' ? 'selected' : ''}>Popular</option>
+                                    <option value="TOP_RATED" ${currentAnime.category === 'TOP_RATED' ? 'selected' : ''}>Top Rated</option>
+                                    <option value="UPCOMING" ${currentAnime.category === 'UPCOMING' ? 'selected' : ''}>Upcoming</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Episodes -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="font-semibold text-lg">Episodes</h4>
+                            <button onclick="addNewEpisode()" 
+                                class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm">
+                                + Add Episode
+                            </button>
+                        </div>
+                        <div class="space-y-4 max-h-96 overflow-y-auto">
+                            ${episodesHTML || '<p class="text-muted-foreground text-center py-4">No episodes yet</p>'}
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-3 pt-4 border-t border-border">
+                        <button onclick="saveAnimeChanges()" 
+                            class="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+                            Save Changes
+                        </button>
+                        <button onclick="closeEditModal()" 
+                            class="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('editModalContent').innerHTML = content;
+        }
+
+        // Close Edit Modal
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+            document.getElementById('editModal').classList.remove('flex');
+            currentAnime = null;
+        }
+
+        // Update Server URL
+        function updateServerUrl(episodeIdx, serverIdx, url) {
+            if (!currentAnime) return;
+            
+            if (!currentAnime.episodes[episodeIdx].servers[serverIdx]) return;
+            
+            // Extract URL from iframe if needed
+            const iframeMatch = url.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+            if (iframeMatch) {
+                currentAnime.episodes[episodeIdx].servers[serverIdx].url = iframeMatch[1];
+                currentAnime.episodes[episodeIdx].servers[serverIdx].type = 'embed';
+            } else {
+                currentAnime.episodes[episodeIdx].servers[serverIdx].url = url;
+                currentAnime.episodes[episodeIdx].servers[serverIdx].type = 'direct';
+            }
+        }
+
+        // Add New Episode
+        function addNewEpisode() {
+            if (!currentAnime) return;
+            
+            const newEpisodeNumber = (currentAnime.episodes || []).length + 1;
+            
+            if (!currentAnime.episodes) currentAnime.episodes = [];
+            
+            currentAnime.episodes.push({
+                episodeNumber: newEpisodeNumber,
+                servers: [
+                    { name: 'server1', url: '', isActive: true, type: 'direct' },
+                    { name: 'server2', url: '', isActive: true, type: 'direct' }
+                ]
+            });
+            
+            renderEditModal();
+        }
+
+        // Remove Episode
+        function removeEpisode(idx) {
+            if (!currentAnime || !confirm('Delete this episode?')) return;
+            
+            currentAnime.episodes.splice(idx, 1);
+            
+            // Renumber episodes
+            currentAnime.episodes.forEach((ep, i) => {
+                ep.episodeNumber = i + 1;
+            });
+            
+            renderEditModal();
+        }
+
+        // Save Anime Changes
+        async function saveAnimeChanges() {
+            if (!currentAnime) return;
+            
+            const category = document.getElementById('editCategory').value;
+            
+            showLoading();
+            try {
+                const res = await fetch(`${API_URL}/api/anime/${currentAnime._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        category,
+                        episodes: currentAnime.episodes
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    showNotification('Anime updated successfully!', 'success');
+                    closeEditModal();
+                    if (currentView === 'anime') loadAllAnime(currentPage);
+                    if (currentView === 'dashboard') loadDashboard();
+                } else {
+                    showNotification(data.error || 'Failed to update anime', 'error');
+                }
+            } catch (error) {
+                console.error('Update failed:', error);
+                showNotification('Failed to update anime', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Delete Anime
+        async function deleteAnime(animeId) {
+            if (!confirm('Are you sure you want to delete this anime? This action cannot be undone.')) return;
+            
+            showLoading();
+            try {
+                const res = await fetch(`${API_URL}/api/anime/${animeId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    showNotification('Anime deleted successfully!', 'success');
+                    if (currentView === 'anime') loadAllAnime(currentPage);
+                    if (currentView === 'dashboard') loadDashboard();
+                } else {
+                    showNotification(data.error || 'Failed to delete anime', 'error');
+                }
+            } catch (error) {
+                console.error('Delete failed:', error);
+                showNotification('Failed to delete anime', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Load Category Anime
+        async function loadCategoryAnime(category) {
+            showLoading();
+            try {
+                const res = await fetch(`${API_URL}/api/anime/category/${category}`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    renderCategoryAnime(data.data, category);
+                }
+            } catch (error) {
+                console.error('Load category failed:', error);
+                showNotification('Failed to load category', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Render Category Anime
+        function renderCategoryAnime(anime, category) {
+            const container = document.getElementById('categoryAnimeList');
+            
+            if (!anime.length) {
+                container.innerHTML = `<p class="text-muted-foreground text-center py-8 col-span-full">No ${category.toLowerCase()} anime found</p>`;
+                return;
+            }
+            
+            container.innerHTML = anime.map(a => `
+                <div class="bg-white rounded-lg border border-border overflow-hidden hover:shadow-lg transition-shadow">
+                    <img src="${a.coverImage?.large || a.coverImage?.medium || ''}" alt="${a.title?.english || a.title?.romaji}" 
+                        class="w-full h-64 object-cover">
+                    <div class="p-4">
+                        <h3 class="font-semibold text-lg mb-2 line-clamp-2">${a.title?.english || a.title?.romaji}</h3>
+                        <div class="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                            <span>${a.episodes?.length || 0} EP</span>
+                            ${a.averageScore ? `<span>⭐ ${a.averageScore}%</span>` : ''}
+                        </div>
+                        <button onclick="openEditModal('${a._id}')" 
+                            class="w-full px-3 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm">
+                            Edit
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Utility Functions
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            document.getElementById('loadingOverlay').classList.add('flex');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('loadingOverlay').classList.remove('flex');
+        }
+
+        function showNotification(message, type = 'info') {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-bounce`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'none';
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.3s';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
